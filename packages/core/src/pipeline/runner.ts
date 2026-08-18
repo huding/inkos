@@ -489,7 +489,8 @@ export class PipelineRunner {
     this.currentAbortSignal()?.throwIfAborted();
   }
 
-  private localize(language: LengthLanguage, messages: { zh: string; en: string }): string {
+  private localize(language: LengthLanguage, messages: { zh: string; en: string; vi?: string }): string {
+    if (language === "vi") return messages.vi ?? messages.en;
     return language !== "zh" ? messages.en : messages.zh;
   }
 
@@ -521,17 +522,17 @@ export class PipelineRunner {
     return lengthSpec.countingMode === "en_words" ? "en" : "zh";
   }
 
-  private logStage(language: LengthLanguage, message: { zh: string; en: string }): void {
+  private logStage(language: LengthLanguage, message: { zh: string; en: string; vi?: string }): void {
     this.config.logger?.info(
-      `${this.localize(language, { zh: "阶段：", en: "Stage: " })}${this.localize(language, message)}`,
+      `${this.localize(language, { zh: "阶段：", en: "Stage: ", vi: "Giai đoạn: " })}${this.localize(language, message)}`,
     );
   }
 
-  private logInfo(language: LengthLanguage, message: { zh: string; en: string }): void {
+  private logInfo(language: LengthLanguage, message: { zh: string; en: string; vi?: string }): void {
     this.config.logger?.info(this.localize(language, message));
   }
 
-  private logWarn(language: LengthLanguage, message: { zh: string; en: string }): void {
+  private logWarn(language: LengthLanguage, message: { zh: string; en: string; vi?: string }): void {
     this.config.logger?.warn(this.localize(language, message));
   }
 

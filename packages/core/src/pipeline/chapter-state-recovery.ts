@@ -116,12 +116,12 @@ export function buildStateValidationFeedback(
   language: LengthLanguage,
 ): string {
   if (warnings.length === 0) {
-    return language === "en"
+    return language === "en" || language === "vi"
       ? "The previous settlement contradicted the chapter text. Reconcile truth files strictly to the body."
       : "上一次状态结算与正文矛盾。请严格以正文为准修正 truth files。";
   }
 
-  if (language === "en") {
+  if (language === "en" || language === "vi") {
     return [
       "The previous settlement failed validation. Fix these contradictions against the chapter body:",
       ...warnings.map((warning) => `- [${warning.category}] ${warning.description}`),
