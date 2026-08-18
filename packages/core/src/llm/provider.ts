@@ -39,10 +39,10 @@ export type OnStreamProgress = (progress: StreamProgress) => void;
 const INKOS_USER_AGENT = "InkOS/1.3.5";
 const UNKNOWN_MODEL_FALLBACK_MAX_TOKENS = 8192 * 3;
 const TRANSIENT_LLM_RETRIES = 2;
-const DEFAULT_FIRST_STREAM_EVENT_TIMEOUT_MS = 120_000;
-const DEFAULT_STREAM_IDLE_TIMEOUT_MS = 90_000;
-const DEFAULT_PIPELINE_FIRST_STREAM_EVENT_TIMEOUT_MS = 300_000;
-const DEFAULT_PIPELINE_STREAM_IDLE_TIMEOUT_MS = 180_000;
+const DEFAULT_FIRST_STREAM_EVENT_TIMEOUT_MS = 360_000;
+const DEFAULT_STREAM_IDLE_TIMEOUT_MS = 270_000;
+const DEFAULT_PIPELINE_FIRST_STREAM_EVENT_TIMEOUT_MS = 900_000;
+const DEFAULT_PIPELINE_STREAM_IDLE_TIMEOUT_MS = 540_000;
 
 export interface StreamDeadlineOptions {
   readonly firstEventTimeoutMs?: number;
@@ -762,7 +762,12 @@ function isRetryableLLMError(error: unknown): boolean {
 
 async function withTransientLLMRetry<T>(
   run: (attempt: number) => Promise<T>,
-  options?: { readonly enabled?: boolean; readonly signal?: AbortSignal },
+  options?: {
+    readonly enabled?: boolean;
+    readonly signal?: AbortSignal;
+    /** Retry even when enabled=false if the error matches this predicate (e.g. empty response with onTextDelta). */
+    readonly alwaysRetryPredicate?: (error: unknown) => boolean;
+  },
 ): Promise<T> {
   const enabled = options?.enabled ?? true;
   let lastError: unknown;
@@ -772,8 +777,9 @@ async function withTransientLLMRetry<T>(
       return await run(attempt + 1);
     } catch (error) {
       lastError = error;
+      const forceRetry = options?.alwaysRetryPredicate?.(error) ?? false;
       if (
-        !enabled
+        (!enabled && !forceRetry)
         || attempt >= TRANSIENT_LLM_RETRIES
         || !isRetryableLLMError(error)
       ) {
@@ -1531,7 +1537,13 @@ export async function chatCompletion(
       },
       // Retrying after UI text deltas have been emitted can duplicate visible
       // text; callers can also opt out (e.g. fast-fail diagnostics).
-      { enabled: (options?.retry ?? true) && !onTextDelta, signal },
+      // Exception: empty-response errors are safe to retry even with onTextDelta
+      // because no tokens were emitted — there is nothing to duplicate.
+      {
+        enabled: (options?.retry ?? true) && !onTextDelta,
+        alwaysRetryPredicate: onTextDelta ? isIncompleteLLMResponseError : undefined,
+        signal,
+      },
     );
   } catch (error) {
     // 注意：中断的流（PartialResponseError）不再"打捞"半截内容当成功返回——

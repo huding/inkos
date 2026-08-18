@@ -21,11 +21,11 @@ export interface DisplayCard {
   readonly values: ReadonlyArray<string>;
 }
 
-const FANFIC_LABELS: Record<string, { readonly zh: string; readonly en: string }> = {
-  canon: { zh: "原著向", en: "Canon-compliant" },
-  au: { zh: "架空改编", en: "Alternate Universe" },
-  ooc: { zh: "OOC", en: "OOC" },
-  cp: { zh: "CP 向", en: "Pairing (CP)" },
+const FANFIC_LABELS: Record<string, { readonly zh: string; readonly en: string; readonly vi: string }> = {
+  canon: { zh: "原著向", en: "Canon-compliant", vi: "Tuân theo nguyên tác" },
+  au: { zh: "架空改编", en: "Alternate Universe", vi: "Thế giới xen kẽ" },
+  ooc: { zh: "OOC", en: "OOC", vi: "OOC" },
+  cp: { zh: "CP 向", en: "Pairing (CP)", vi: "CP" },
 };
 
 // Turn the structured frontmatter of story_frame.md into a few reader-friendly
@@ -50,9 +50,18 @@ export function frontmatterToCards(fm: TruthFrontmatter | null | undefined): Rea
   if (prohibitions.length > 0) cards.push({ label: tr("红线", "Hard Lines", "Giới hạn đỏ"), values: prohibitions });
   if (fm.fanficMode) {
     const fanficLabel = FANFIC_LABELS[fm.fanficMode];
+    const lang = getAppLanguage();
     cards.push({
       label: tr("同人模式", "Fanfic Mode", "Chế độ đồng nhân"),
-      values: [fanficLabel ? tr(fanficLabel.zh, fanficLabel.en) : fm.fanficMode],
+      values: [
+        fanficLabel
+          ? lang === "en"
+            ? fanficLabel.en
+            : lang === "vi"
+              ? fanficLabel.vi
+              : fanficLabel.zh
+          : fm.fanficMode,
+      ],
     });
   }
   return cards;
@@ -152,13 +161,30 @@ const FOUNDATION_FILE_LABELS_EN: Record<string, string> = {
   "book_rules.md": "Narrative Rules",
 };
 
+const FOUNDATION_FILE_LABELS_VI: Record<string, string> = {
+  "outline/story_frame.md": "Nền tảng Truyện",
+  "outline/volume_map.md": "Kế hoạch Tập",
+  "current_state.md": "Trạng thái Hiện tại",
+  "pending_hooks.md": "Hồ Móc",
+  "emotional_arcs.md": "Cung Cảm xúc",
+  "subplot_board.md": "Tuyến Phụ",
+  "story_bible.md": "Bible Thế giới",
+  "volume_outline.md": "Kế hoạch Tập",
+  "book_rules.md": "Quy tắc Kể chuyện",
+};
+
 // Language-aware display label for a foundation truth file. Returns undefined
 // for files that are not part of the foundation list (same qualification as
 // FOUNDATION_FILE_LABELS).
 export function foundationFileLabel(name: string): string | undefined {
   const zh = FOUNDATION_FILE_LABELS[name];
   if (zh === undefined) return undefined;
-  return getAppLanguage() === "en" ? FOUNDATION_FILE_LABELS_EN[name] ?? zh : zh;
+  const lang = getAppLanguage();
+  return lang === "en"
+    ? FOUNDATION_FILE_LABELS_EN[name] ?? zh
+    : lang === "vi"
+      ? FOUNDATION_FILE_LABELS_VI[name] ?? zh
+      : zh;
 }
 
 // --- current_state.md ---------------------------------------------------

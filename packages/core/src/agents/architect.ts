@@ -507,10 +507,10 @@ Do not duplicate the same fact across sections. The protagonist's arc lives only
 
 Four prose sections, ~600-900 chars each. No tables. No bullet lists. Real paragraphs. **Do NOT write the protagonist's full arc here** — that is owned by roles/主要角色/<protagonist>.md. Use a single-line pointer inside this block (e.g. "The protagonist is X; full arc lives in roles/主要角色/X.md").
 
-## 01_Theme_and_Tonal_Ground
+## 01_Chủ_đề_và_Nền_tảng_Cảm_xúc
 What is this book actually about — not "hero grows from weak to strong" (empty), but a concrete proposition. Then the tonal ground: warm / cold / fierce / severe — which, and why this and not another. End with a one-line pointer to the protagonist role file.
 
-## 02_Core_Conflict_and_Foreground_Background_Story_Layers
+## 02_Cốt_Mâu_thuẫn_và_Các_Tầng_Câu_chuyện
 The book's main tension — not "good vs evil" but "because A believes X and B believes Y, they will inevitably collide on Z". At least two opponents: one visible, one structural/systemic. Opponents have their own logic.
 
 **This section must explicitly write out the foreground story / background story layers**:
