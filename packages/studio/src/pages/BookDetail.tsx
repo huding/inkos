@@ -488,12 +488,12 @@ export function BookDetail({
           <button
             onClick={handleToggleReviewMode}
             title={reviewMode === "manual"
-              ? tr("手动审查：写完即停，由你点 审稿/修订/通过（更快、更可控）。点此切回自动。", "Manual review: stop after writing, you click Review/Revise/Approve (faster, more control). Click to switch to auto.", "Kiểm duyệt thủ công: dừng sau khi viết, bạn nhấn Xem/Sửa/Duyệt (nhanh hơn, kiểm soát hơn). Nhấn để chuyển sang tự động.")
-              : tr("自动审查：写完自动审校并按需重写（更省心，但更慢）。点此切到手动·写完即停。", "Auto review: after writing it auto-audits and rewrites as needed (less effort, but slower). Click to switch to manual stop.", "Kiểm duyệt tự động: sau khi viết tự động kiểm tra và viết lại nếu cần (nhẹ nhàng hơn, nhưng chậm hơn). Nhấn để chuyển sang thủ công.")}
+              ? tr("手动审查：写完即停，由你点 审稿/修订/通过（更快、更可控）。点此切回自动。", "Manual review: stop after writing, you click Review/Revise/Approve (faster, more control). Click to switch to auto.", "Kiểm toán thủ công: dừng sau khi viết, bạn nhấn Xem/Sửa/Duyệt (nhanh hơn, kiểm soát hơn). Nhấn để chuyển sang tự động.")
+              : tr("自动审查：写完自动审校并按需重写（更省心，但更慢）。点此切到手动·写完即停。", "Auto review: after writing it auto-audits and rewrites as needed (less effort, but slower). Click to switch to manual stop.", "Kiểm toán tự động: sau khi viết tự động kiểm tra và viết lại nếu cần (nhẹ nhàng hơn, nhưng chậm hơn). Nhấn để chuyển sang thủ công.")}
             className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-secondary/60 text-foreground rounded-xl border border-border/50 hover:bg-secondary transition-all"
           >
             {reviewMode === "manual" ? <Hand size={16} /> : <Settings2 size={16} />}
-            {reviewMode === "manual" ? tr("审查：手动·写完即停", "Review: manual stop", "Kiểm duyệt: thủ công") : tr("审查：自动", "Review: auto", "Kiểm duyệt: tự động")}
+            {reviewMode === "manual" ? tr("审查：手动·写完即停", "Review: manual stop", "Kiểm toán: thủ công") : tr("审查：自动", "Review: auto", "Kiểm toán: tự động")}
           </button>
           <button
             onClick={() => setConfirmDeleteOpen(true)}
@@ -742,7 +742,8 @@ export function BookDetail({
                         onClick={async () => {
                           try {
                             const auditResult = await fetchJson<{ passed?: boolean; issues?: unknown[] }>(`/books/${bookId}/audit/${ch.number}`, { method: "POST" });
-                            alert(auditResult.passed ? "Audit passed" : `Audit failed: ${auditResult.issues?.length ?? 0} issues`);
+                            const auditMsg = auditResult.passed ? tr("审计通过", "Audit passed", "Kiểm toán đạt") : tr("审计失败：", "Audit failed: ", "Kiểm toán thất bại: ") + (auditResult.issues?.length ?? 0) + tr(" 个问题", " issue(s)", " vấn đề");
+                            alert(auditMsg);
                             refetch();
                           } catch (e) {
                             alert(e instanceof Error ? e.message : "Audit failed");

@@ -125,7 +125,7 @@ export function renderNarrativeSelectedContext(
   entries: ReadonlyArray<ContextPackage["selectedContext"][number]>,
   language: "zh" | "en" | "vi" = "zh",
 ): string {
-  const heading = language === "en" ? "Evidence" : "证据";
+  const heading = language === "en" ? "Evidence" : language === "vi" ? "Bằng chứng" : "证据";
   const reasonLabel = language === "zh" ? "原因" : language === "vi" ? "lý do" : "reason";
   const detailLabel = language === "zh" ? "细节" : language === "vi" ? "chi tiết" : "detail";
 

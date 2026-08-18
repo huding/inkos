@@ -12,6 +12,8 @@ const SYSTEM_PROMPT_ZH = `你是互动影游编剧。根据用户的故事前提
 const SYSTEM_PROMPT_EN = `You are an interactive film scriptwriter. From the user's story premise, generate a small but complete playable branching graph.
 Requirements: exactly 1 node with type=start; at least 2 branch nodes; at least 2 clearly differentiated endings; every path must reach some ending; use variables, conditions, and effects for choices that genuinely change later scenes. Finish by calling submit_story_graph.`;
 
+const SYSTEM_PROMPT_VI = `Bạn là biên kịch phim tương tác. Từ tiền đề câu chuyện của người dùng, hãy tạo một đồ thị phân nhánh có thể chơi được, nhỏ nhưng hoàn chỉnh.\nYêu cầu: đúng 1 nút có type=start; ít nhất 2 nút branch; ít nhất 2 kết thúc khác biệt rõ ràng; mọi đường đi đều phải dẫn đến một kết thúc; sử dụng biến, điều kiện và hiệu ứng cho những lựa chọn thực sự thay đổi các cảnh sau. Kết thúc bằng cách gọi submit_story_graph.`;
+
 export interface GenerateStoryGraphInput {
   readonly projectId: string;
   readonly title: string;
@@ -30,10 +32,12 @@ export async function generateStoryGraph(
   },
 ): Promise<StoryGraph> {
   const language = options?.language ?? "zh";
-  const systemPrompt = language === "en" ? SYSTEM_PROMPT_EN : SYSTEM_PROMPT_ZH;
+  const systemPrompt = language === "vi" ? SYSTEM_PROMPT_VI : language === "en" ? SYSTEM_PROMPT_EN : SYSTEM_PROMPT_ZH;
   const userPrompt = language === "en"
     ? `Title: ${input.title}\nPremise: ${input.premise}`
-    : `标题：${input.title}\n前提：${input.premise}`;
+    : language === "vi"
+      ? `Tên: ${input.title}\nTiền đề: ${input.premise}`
+      : `标题：${input.title}\n前提：${input.premise}`;
   const submitted = await runWorkerAgentTool(client, model, appendActivatedSkillGuidance([
     { role: "system", content: systemPrompt },
     { role: "user", content: userPrompt },
@@ -42,7 +46,9 @@ export async function generateStoryGraph(
     label: language === "zh" ? "提交故事图谱" : language === "vi" ? "Gửi đồ thị câu chuyện" : "Submit Story Graph",
     description: language === "en"
       ? "Submit the complete playable branching graph. The host owns the project id, schema version, and title."
-      : "提交完整可玩的分支图。项目 id、schema 版本和标题由宿主负责。",
+      : language === "vi"
+        ? "Gửi đồ thị phân nhánh có thể chơi hoàn chỉnh. Host chịu trách nhiệm về project id, phiên bản schema và tiêu đề."
+        : "提交完整可玩的分支图。项目 id、schema 版本和标题由宿主负责。",
     parameters: StoryGraphContentToolSchema,
   }, {
     temperature: 0.5,

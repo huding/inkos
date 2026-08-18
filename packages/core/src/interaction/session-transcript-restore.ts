@@ -610,7 +610,7 @@ function messageEventToInteractionMessage(
   return null;
 }
 
-function messageEventsToInteractionMessages(events: MessageEvent[]): InteractionMessage[] {
+function messageEventsToInteractionMessages(events: MessageEvent[], language?: string): InteractionMessage[] {
   type RestoredToolCall = {
     id: string;
     tool: string;
@@ -618,28 +618,32 @@ function messageEventsToInteractionMessages(events: MessageEvent[]): Interaction
     timestamp: number;
   };
 
-  const agentLabels: Record<string, string> = {
-    architect: "建书",
-    writer: "写作",
-    auditor: "审计",
-    reviser: "修订",
-    exporter: "导出",
+  // Inline trilingual helper so this module stays server-side without importing studio's tr().
+  const pickLabel = (zh: string, en: string, vi: string): string =>
+    language === "en" ? en : language === "vi" ? vi : zh;
+
+  const agentLabels: Record<string, readonly [zh: string, en: string, vi: string]> = {
+    architect: ["建书", "Book setup", "Tạo sách"],
+    writer: ["写作", "Writing", "Viết"],
+    auditor: ["审计", "Audit", "Kiểm toán"],
+    reviser: ["修订", "Revision", "Sửa đổi"],
+    exporter: ["导出", "Export", "Xuất"],
   };
-  const toolLabels: Record<string, string> = {
-    read: "读取文件",
-    edit: "编辑文件",
-    grep: "搜索",
-    ls: "列目录",
-    propose_action: "确认动作",
-    short_fiction_run: "短篇生产",
-    generate_cover: "生成封面",
-    play_edit: "编辑互动世界",
-    play_start: "启动互动世界",
-    play_revise: "重做互动回合",
-    play_step: "推进互动世界",
-    create_narrative_forecast: "剧情多线推演",
-    get_narrative_forecast: "核验剧情推演",
-    select_narrative_branch: "采用候选分支",
+  const toolLabels: Record<string, readonly [zh: string, en: string, vi: string]> = {
+    read: ["读取文件", "Read file", "Đọc tệp"],
+    edit: ["编辑文件", "Edit file", "Chỉnh sửa tệp"],
+    grep: ["搜索", "Search", "Tìm kiếm"],
+    ls: ["列目录", "List directory", "Liệt kê thư mục"],
+    propose_action: ["确认动作", "Confirm action", "Xác nhận hành động"],
+    short_fiction_run: ["短篇生产", "Short fiction", "Truyện ngắn"],
+    generate_cover: ["生成封面", "Generate cover", "Tạo bìa"],
+    play_edit: ["编辑互动世界", "Edit interactive world", "Sửa thế giới tương tác"],
+    play_start: ["启动互动世界", "Start interactive world", "Bắt đầu thế giới tương tác"],
+    play_revise: ["重做互动回合", "Redo play turn", "Làm lại lượt tương tác"],
+    play_step: ["推进互动世界", "Advance interactive world", "Tiến triển thế giới tương tác"],
+    create_narrative_forecast: ["剧情多线推演", "Narrative forecast", "Dự báo đa tuyến cốt truyện"],
+    get_narrative_forecast: ["核验剧情推演", "Recheck forecast", "Kiểm tra lại dự báo"],
+    select_narrative_branch: ["采用候选分支", "Select candidate branch", "Chọn nhánh ứng viên"],
   };
 
   const messages: InteractionMessage[] = [];
@@ -695,8 +699,10 @@ function messageEventsToInteractionMessages(events: MessageEvent[]): Interaction
   };
 
   const resolveToolLabel = (tool: string, agent?: string): string => {
-    if (tool === "sub_agent" && agent) return agentLabels[agent] ?? agent;
-    return toolLabels[tool] ?? tool;
+    const label = tool === "sub_agent" && agent
+      ? agentLabels[agent]
+      : toolLabels[tool];
+    return label ? pickLabel(label[0], label[1], label[2]) : tool;
   };
 
   const hasCompletedPlayTool = (executions: ReadonlyArray<ToolExecution>): boolean =>
@@ -833,6 +839,7 @@ function messageEventsToInteractionMessages(events: MessageEvent[]): Interaction
 export async function deriveBookSessionFromTranscript(
   projectRoot: string,
   sessionId: string,
+  options?: { language?: string },
 ): Promise<BookSession | null> {
   const events = await readTranscriptEvents(projectRoot, sessionId);
   if (events.length === 0) return null;
@@ -865,7 +872,7 @@ export async function deriveBookSessionFromTranscript(
     updatedAt = Math.max(updatedAt, event.updatedAt);
   }
 
-  const messages = messageEventsToInteractionMessages(committedMessageEvents(events));
+  const messages = messageEventsToInteractionMessages(committedMessageEvents(events), options?.language);
 
   if (title === null) {
     title = firstUserMessageTitle(messages);

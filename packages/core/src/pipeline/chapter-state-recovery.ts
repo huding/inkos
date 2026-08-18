@@ -145,7 +145,9 @@ export function buildStateDegradedIssues(
       description: warning.description,
       suggestion: language === "en"
         ? "Repair chapter state from the persisted body before continuing."
-        : "请先基于已保存正文修复本章 state，再继续后续章节。",
+        : language === "vi"
+          ? "Hãy sửa trạng thái chương này dựa trên nội dung đã lưu trước khi tiếp tục các chương sau."
+          : "请先基于已保存正文修复本章 state，再继续后续章节。",
     }));
   }
 
@@ -154,10 +156,14 @@ export function buildStateDegradedIssues(
     category: "state-validation",
     description: language === "en"
       ? "State validation still failed after settlement retry."
-      : "状态结算重试后仍未通过校验。",
+      : language === "vi"
+        ? "Kiểm tra trạng thái vẫn thất bại sau khi thử lại kết toán."
+        : "状态结算重试后仍未通过校验。",
     suggestion: language === "en"
       ? "Repair chapter state from the persisted body before continuing."
-      : "请先基于已保存正文修复本章 state，再继续后续章节。",
+      : language === "vi"
+        ? "Hãy sửa trạng thái chương này dựa trên nội dung đã lưu trước khi tiếp tục các chương sau."
+        : "请先基于已保存正文修复本章 state，再继续后续章节。",
   }];
 }
 

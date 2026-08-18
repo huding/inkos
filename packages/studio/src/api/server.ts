@@ -4496,7 +4496,8 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
 
   app.get("/api/v1/sessions/:sessionId", async (c) => {
     const sessionId = c.req.param("sessionId");
-    const session = await loadBookSession(root, sessionId);
+    const cfg = await loadCurrentProjectConfig({ requireApiKey: false }).catch(() => null);
+    const session = await loadBookSession(root, sessionId, { language: cfg?.language });
     if (!session) return c.json({ error: "Session not found" }, 404);
     const task = await loadReconciledTaskSnapshot(sessionId);
     return c.json({ session, ...(task ? { task } : {}) });
@@ -4647,7 +4648,7 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
       const config = await loadCurrentProjectConfig({ requireApiKey: false });
       const client = createLLMClient(config.llm);
 
-      const loadedBookSession = await loadBookSession(root, sessionId);
+      const loadedBookSession = await loadBookSession(root, sessionId, { language: config.language });
       if (!loadedBookSession) {
         throw new ApiError(404, "SESSION_NOT_FOUND", `Session not found: ${sessionId}`);
       }

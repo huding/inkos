@@ -62,14 +62,18 @@ export async function validateChapterTruthPersistence(params: {
     params.logger?.warn(`State validation error for chapter ${params.chapterNumber}: ${String(error)}`);
     const errorDescription = params.language === "en"
       ? `State validation unavailable: ${String(error)}`
-      : `状态校验不可用：${String(error)}`;
+      : params.language === "vi"
+        ? `Không thể kiểm tra trạng thái: ${String(error)}`
+        : `状态校验不可用：${String(error)}`;
     const errorIssue: AuditIssue = {
       severity: "warning",
       category: "state-validation",
       description: errorDescription,
       suggestion: params.language === "en"
         ? "Repair chapter state from the persisted body before continuing."
-        : "请先基于已保存正文修复本章 state，再继续后续章节。",
+        : params.language === "vi"
+          ? "Hãy sửa trạng thái chương này dựa trên nội dung đã lưu trước khi tiếp tục các chương sau."
+          : "请先基于已保存正文修复本章 state，再继续后续章节。",
     };
     return {
       validation: { passed: true, warnings: [] },

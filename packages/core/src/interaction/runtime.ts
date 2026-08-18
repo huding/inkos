@@ -113,12 +113,14 @@ function resolveRuntimeLanguage(request: InteractionRequest): RuntimeLanguage {
   return request.language === "en" ? "en" : request.language === "vi" ? "vi" : "zh";
 }
 
-function localize<T>(language: RuntimeLanguage, messages: { zh: T; en: T }): T {
-  return language === "en" ? messages.en : messages.zh;
+function localize<T>(language: RuntimeLanguage, messages: { zh: T; en: T; vi?: T }): T {
+  if (language === "en") return messages.en;
+  if (language === "vi") return messages.vi ?? messages.en;
+  return messages.zh;
 }
 
 function localizeMode(mode: AutomationMode, language: RuntimeLanguage): string {
-  if (language === "en") {
+  if (language === "en" || language === "vi") {
     return mode;
   }
 
@@ -146,18 +148,31 @@ function renderCreationDraft(
         draft.blurb ? `- Blurb: ${draft.blurb}` : undefined,
         draft.nextQuestion ? `- Next: ${draft.nextQuestion}` : undefined,
       ]
-    : [
-        "# 当前创作草案",
-        draft.title ? `- 书名：${draft.title}` : undefined,
-        draft.genre ? `- 题材：${draft.genre}` : undefined,
-        draft.platform ? `- 平台：${draft.platform}` : undefined,
-        draft.worldPremise ? `- 世界观：${draft.worldPremise}` : undefined,
-        draft.protagonist ? `- 主角：${draft.protagonist}` : undefined,
-        draft.conflictCore ? `- 核心冲突：${draft.conflictCore}` : undefined,
-        draft.volumeOutline ? `- 卷纲方向：${draft.volumeOutline}` : undefined,
-        draft.blurb ? `- 简介：${draft.blurb}` : undefined,
-        draft.nextQuestion ? `- 下一步：${draft.nextQuestion}` : undefined,
-      ];
+    : language === "vi"
+      ? [
+          "# Bản Thảo Tác Phẩm Hiện Tại",
+          draft.title ? `- Tên sách: ${draft.title}` : undefined,
+          draft.genre ? `- Thể loại: ${draft.genre}` : undefined,
+          draft.platform ? `- Nền tảng: ${draft.platform}` : undefined,
+          draft.worldPremise ? `- Thế giới: ${draft.worldPremise}` : undefined,
+          draft.protagonist ? `- Nhân vật chính: ${draft.protagonist}` : undefined,
+          draft.conflictCore ? `- Mâu thuẫn cốt lõi: ${draft.conflictCore}` : undefined,
+          draft.volumeOutline ? `- Định hướng tập: ${draft.volumeOutline}` : undefined,
+          draft.blurb ? `- Giới thiệu: ${draft.blurb}` : undefined,
+          draft.nextQuestion ? `- Tiếp theo: ${draft.nextQuestion}` : undefined,
+        ]
+      : [
+          "# 当前创作草案",
+          draft.title ? `- 书名：${draft.title}` : undefined,
+          draft.genre ? `- 题材：${draft.genre}` : undefined,
+          draft.platform ? `- 平台：${draft.platform}` : undefined,
+          draft.worldPremise ? `- 世界观：${draft.worldPremise}` : undefined,
+          draft.protagonist ? `- 主角：${draft.protagonist}` : undefined,
+          draft.conflictCore ? `- 核心冲突：${draft.conflictCore}` : undefined,
+          draft.volumeOutline ? `- 卷纲方向：${draft.volumeOutline}` : undefined,
+          draft.blurb ? `- 简介：${draft.blurb}` : undefined,
+          draft.nextQuestion ? `- 下一步：${draft.nextQuestion}` : undefined,
+        ];
   return lines.filter(Boolean).join("\n");
 }
 
@@ -176,6 +191,7 @@ function buildTaskStartedState(
         stageLabel: localize(language, {
           zh: "准备章节输入",
           en: "preparing chapter inputs",
+          vi: "đang chuẩn bị dữ liệu chương",
         }),
       };
     case "create_book":
@@ -185,6 +201,7 @@ function buildTaskStartedState(
         stageLabel: localize(language, {
           zh: "创建作品基础",
           en: "creating book foundation",
+          vi: "đang tạo nền tảng tác phẩm",
         }),
       };
     case "export_book":
@@ -195,6 +212,7 @@ function buildTaskStartedState(
         stageLabel: localize(language, {
           zh: "导出作品文件",
           en: "exporting book artifacts",
+          vi: "đang xuất tệp tác phẩm",
         }),
       };
     case "revise_chapter":
@@ -204,8 +222,8 @@ function buildTaskStartedState(
         bookId: request.bookId ?? session.activeBookId,
         chapterNumber: request.chapterNumber ?? session.activeChapterNumber,
         stageLabel: request.intent === "rewrite_chapter"
-          ? localize(language, { zh: "重写章节", en: "rewriting chapter" })
-          : localize(language, { zh: "修订章节", en: "revising chapter" }),
+          ? localize(language, { zh: "重写章节", en: "rewriting chapter", vi: "đang viết lại chương" })
+          : localize(language, { zh: "修订章节", en: "revising chapter", vi: "đang hiệu đính chương" }),
       };
     case "update_focus":
     case "update_author_intent":
@@ -217,6 +235,7 @@ function buildTaskStartedState(
         stageLabel: localize(language, {
           zh: "应用项目修改",
           en: "applying project edit",
+          vi: "đang áp dụng chỉnh sửa dự án",
         }),
       };
     case "pause_book":
@@ -228,6 +247,7 @@ function buildTaskStartedState(
         stageLabel: localize(language, {
           zh: "已由用户暂停",
           en: "paused by user",
+          vi: "đã tạm dừng theo yêu cầu",
         }),
       };
     default:
@@ -238,6 +258,7 @@ function buildTaskStartedState(
         stageLabel: localize(language, {
           zh: `处理中：${request.intent}`,
           en: `handling ${request.intent}`,
+          vi: `đang xử lý: ${request.intent}`,
         }),
       };
   }
@@ -290,10 +311,12 @@ function buildPendingDecision(
       ? localize(language, {
           zh: "执行已完成。请明确选择下一步操作。",
           en: "Execution finished. Choose the next action explicitly.",
+          vi: "Đã hoàn tất. Vui lòng chọn bước tiếp theo.",
         })
       : localize(language, {
           zh: "执行已完成，等待你的下一步决定。",
           en: "Execution finished. Waiting for your next decision.",
+          vi: "Đã hoàn tất. Đang chờ quyết định tiếp theo của bạn.",
         }),
   };
 }
@@ -311,6 +334,7 @@ function buildWaitingExecution(
     stageLabel: localize(language, {
       zh: "等待你的下一步决定",
       en: "waiting for your next decision",
+      vi: "đang chờ quyết định tiếp theo của bạn",
     }),
   };
 }
@@ -552,6 +576,7 @@ export async function runInteractionRequest(params: {
       stageLabel: localize(language, {
         zh: "已完成",
         en: "completed",
+        vi: "hoàn tất",
       }),
     },
   });

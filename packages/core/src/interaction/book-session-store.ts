@@ -42,15 +42,16 @@ export class SessionAlreadyMigratedError extends Error {
 export async function loadBookSession(
   projectRoot: string,
   sessionId: string,
+  options?: { language?: string },
 ): Promise<BookSession | null> {
-  const transcriptSession = await deriveBookSessionFromTranscript(projectRoot, sessionId);
+  const transcriptSession = await deriveBookSessionFromTranscript(projectRoot, sessionId, options);
   if (transcriptSession) return transcriptSession;
 
   const legacySession = await readLegacyBookSession(projectRoot, sessionId);
   if (!legacySession) return null;
 
   await migrateLegacyBookSessionToTranscript(projectRoot, legacySession);
-  return await deriveBookSessionFromTranscript(projectRoot, sessionId) ?? legacySession;
+  return await deriveBookSessionFromTranscript(projectRoot, sessionId, options) ?? legacySession;
 }
 
 async function appendSessionCreatedEvent(
