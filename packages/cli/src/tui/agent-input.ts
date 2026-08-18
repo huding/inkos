@@ -48,7 +48,7 @@ export async function processTuiAgentInput(params: {
   );
   const userTimestamp = Date.now();
   const currentBookId = params.activeBookId ?? params.session.activeBookId ?? null;
-  const language = config.language === "en" ? "en" : "zh";
+  const language = config.language === "en" ? "en" : config.language === "vi" ? "vi" : "zh";
   const route = resolveTuiAgentRoute(params.input, params.session, currentBookId, language);
   const resolvedBookId = route.detachBook ? null : currentBookId;
   const initialMessages = params.session.messages
@@ -166,7 +166,7 @@ export function resolveTuiAgentRoute(
   rawInput: string,
   session: InteractionSession,
   activeBookId: string | null,
-  language: "zh" | "en" = "zh",
+  language: "zh" | "en" | "vi" = "zh",
 ): TuiAgentRoute {
   const input = rawInput.trim();
   const currentKind = session.sessionKind ?? (activeBookId ? "book" : "chat");
@@ -174,7 +174,7 @@ export function resolveTuiAgentRoute(
   if (/^\/confirm$/i.test(input)) {
     const pending = session.pendingProposedAction;
     if (!pending) {
-      return localConfirmationRoute(currentKind, input, language === "en" ? "There is no pending action." : "没有待确认的动作。");
+      return localConfirmationRoute(currentKind, input, language === "zh" ? "没有待确认的动作。" : language === "vi" ? "Không có hành động nào đang chờ." : "There is no pending action.");
     }
     const requestedIntent = RequestedIntentSchema.safeParse(pending.action);
     const actionPayload = pending.actionPayload === undefined
@@ -207,8 +207,8 @@ export function resolveTuiAgentRoute(
       currentKind,
       input,
       session.pendingProposedAction
-        ? language === "en" ? "Pending action cancelled." : "已取消待确认动作。"
-        : language === "en" ? "There is no pending action." : "没有待确认的动作。",
+        ? language === "zh" ? "已取消待确认动作。" : language === "vi" ? "Đã hủy hành động đang chờ." : "Pending action cancelled."
+        : language === "zh" ? "没有待确认的动作。" : language === "vi" ? "Không có hành động nào đang chờ." : "There is no pending action.",
     );
   }
 
@@ -246,7 +246,7 @@ export function resolveTuiAgentRoute(
 
   if (/^\/write$/i.test(input)) {
     return {
-      userMessage: language === "en" ? "Write the next chapter" : "写下一章",
+      userMessage: language === "zh" ? "写下一章" : language === "vi" ? "Viết chương tiếp theo" : "Write the next chapter",
       sessionKind: activeBookId ? "book" : currentKind,
       actionSource: "slash",
       requestedIntent: "write_next",
@@ -322,8 +322,12 @@ function extractProposedAction(messages: ReadonlyArray<unknown>): PendingPropose
   return undefined;
 }
 
-function formatProposedAction(action: PendingProposedAction, language: "zh" | "en"): string {
-  return language === "en"
-    ? [action.title ?? "Confirm action", action.summary ?? "Confirm to continue.", "", action.instruction, "", "Type /confirm to continue, or /cancel to cancel."].join("\n")
-    : [action.title ?? "确认执行", action.summary ?? "确认后继续执行。", "", action.instruction, "", "输入 /confirm 继续，或 /cancel 取消。"].join("\n");
+function formatProposedAction(action: PendingProposedAction, language: "zh" | "en" | "vi"): string {
+  if (language === "en") {
+    return [action.title ?? "Confirm action", action.summary ?? "Confirm to continue.", "", action.instruction, "", "Type /confirm to continue, or /cancel to cancel."].join("\n");
+  }
+  if (language === "vi") {
+    return [action.title ?? "Xác nhận thực hiện", action.summary ?? "Xác nhận để tiếp tục.", "", action.instruction, "", "Nhập /confirm để tiếp tục, hoặc /cancel để hủy."].join("\n");
+  }
+  return [action.title ?? "确认执行", action.summary ?? "确认后继续执行。", "", action.instruction, "", "输入 /confirm 继续，或 /cancel 取消。"].join("\n");
 }

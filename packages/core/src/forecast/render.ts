@@ -4,39 +4,59 @@ import type { ForecastBranch, NarrativeForecast } from "./schema.js";
 // derived purely from forecast.json so re-rendering never needs another LLM
 // call and tests stay clock-free.
 
+function headerFor(language: "zh" | "en" | "vi", zh: string[], en: string[], vi: string[]): string[] {
+  return language === "zh" ? zh : language === "vi" ? vi : en;
+}
+
 export function renderForecastComparisonMarkdown(forecast: NarrativeForecast): string {
-  const zh = forecast.language === "zh";
-  const header = zh
-    ? [
-        `# 叙事推演对比：${forecast.divergence}`,
-        "",
-        `- 推演 ID：${forecast.forecastId}`,
-        `- 书籍：${forecast.bookId}`,
-        `- 基准章节：第 ${forecast.baseChapter} 章`,
-        `- 推演跨度：约 ${forecast.horizon} 章`,
-        `- 生成时间：${forecast.createdAt}`,
-        "",
-        "> 本文件是非正史规划材料，不会改动正文或权威状态。",
-      ]
-    : [
-        `# Narrative forecast comparison: ${forecast.divergence}`,
-        "",
-        `- Forecast id: ${forecast.forecastId}`,
-        `- Book: ${forecast.bookId}`,
-        `- Base chapter: ${forecast.baseChapter}`,
-        `- Horizon: ~${forecast.horizon} chapters`,
-        `- Created at: ${forecast.createdAt}`,
-        "",
-        "> Non-canonical planning material. Nothing here modifies prose or authoritative state.",
-      ];
+  const lang = forecast.language;
+  const zh = lang === "zh";
+  const header = headerFor(
+    lang,
+    [
+      `# 叙事推演对比：${forecast.divergence}`,
+      "",
+      `- 推演 ID：${forecast.forecastId}`,
+      `- 书籍：${forecast.bookId}`,
+      `- 基准章节：第 ${forecast.baseChapter} 章`,
+      `- 推演跨度：约 ${forecast.horizon} 章`,
+      `- 生成时间：${forecast.createdAt}`,
+      "",
+      "> 本文件是非正史规划材料，不会改动正文或权威状态。",
+    ],
+    [
+      `# Narrative forecast comparison: ${forecast.divergence}`,
+      "",
+      `- Forecast id: ${forecast.forecastId}`,
+      `- Book: ${forecast.bookId}`,
+      `- Base chapter: ${forecast.baseChapter}`,
+      `- Horizon: ~${forecast.horizon} chapters`,
+      `- Created at: ${forecast.createdAt}`,
+      "",
+      "> Non-canonical planning material. Nothing here modifies prose or authoritative state.",
+    ],
+    [
+      `# So sánh dự báo cốt truyện: ${forecast.divergence}`,
+      "",
+      `- ID dự báo: ${forecast.forecastId}`,
+      `- Sách: ${forecast.bookId}`,
+      `- Chương gốc: ${forecast.baseChapter}`,
+      `- Độ rộng: khoảng ${forecast.horizon} chương`,
+      `- Thời điểm tạo: ${forecast.createdAt}`,
+      "",
+      "> Đây là tài liệu lập kế hoạch ngoài chính sử; không thay đổi văn xuôi hay trạng thái chính sử.",
+    ],
+  );
 
   const tableHeader = zh
     ? ["| 分支 | 标题 | 意图匹配 | 风险数 | 前提 |", "| --- | --- | --- | --- | --- |"]
-    : ["| Branch | Title | Intent fit | Risks | Premise |", "| --- | --- | --- | --- | --- |"];
+    : lang === "vi"
+      ? ["| Nhánh | Tiêu đề | Khớp ý định | Rủi ro | Tiền đề |", "| --- | --- | --- | --- | --- |"]
+      : ["| Branch | Title | Intent fit | Risks | Premise |", "| --- | --- | --- | --- | --- |"];
   const tableRows = forecast.branches.map((branch) =>
     `| ${branch.branchId} | ${escapeCell(branch.title)} | ${branch.intentAlignment.score} | ${branch.risks.length} | ${escapeCell(branch.premise)} |`);
 
-  const sections = forecast.branches.map((branch) => renderBranchSection(branch, zh));
+  const sections = forecast.branches.map((branch) => renderBranchSection(branch, lang));
 
   return [...header, "", ...tableHeader, ...tableRows, "", sections.join("\n\n")].join("\n");
 }
@@ -48,43 +68,59 @@ export function renderSelectedBranchPlanMarkdown(input: {
   readonly stale: boolean;
 }): string {
   const { forecast, branch } = input;
-  const zh = forecast.language === "zh";
+  const lang = forecast.language;
+  const zh = lang === "zh";
 
   const staleWarning = input.stale
     ? (zh
         ? "> ⚠️ 该推演已过期：正史章节或状态在推演生成后发生了变化。以下计划基于旧上下文，采用前请重新核对，必要时重新生成推演。"
-        : "> ⚠️ This forecast is stale: canonical chapters or state changed after it was generated. The plan below is based on outdated context — re-check before applying, and regenerate if needed.")
+        : lang === "vi"
+          ? "> ⚠️ Dự báo này đã lỗi thời: các chương hoặc trạng thái chính sử đã thay đổi sau khi tạo. Kế hoạch dưới đây dựa trên ngữ cảnh cũ — hãy kiểm tra lại trước khi áp dụng và tạo lại nếu cần."
+          : "> ⚠️ This forecast is stale: canonical chapters or state changed after it was generated. The plan below is based on outdated context — re-check before applying, and regenerate if needed.")
     : "";
 
-  const header = zh
-    ? [
-        `# 已选分支计划：${branch.title}`,
-        "",
-        `- 推演 ID：${forecast.forecastId}`,
-        `- 分支：${branch.branchId}`,
-        `- 分歧点：${forecast.divergence}`,
-        `- 基准章节：第 ${forecast.baseChapter} 章`,
-        `- 选择时间：${input.selectedAt}`,
-      ]
-    : [
-        `# Selected branch plan: ${branch.title}`,
-        "",
-        `- Forecast id: ${forecast.forecastId}`,
-        `- Branch: ${branch.branchId}`,
-        `- Divergence: ${forecast.divergence}`,
-        `- Base chapter: ${forecast.baseChapter}`,
-        `- Selected at: ${input.selectedAt}`,
-      ];
+  const header = headerFor(
+    lang,
+    [
+      `# 已选分支计划：${branch.title}`,
+      "",
+      `- 推演 ID：${forecast.forecastId}`,
+      `- 分支：${branch.branchId}`,
+      `- 分歧点：${forecast.divergence}`,
+      `- 基准章节：第 ${forecast.baseChapter} 章`,
+      `- 选择时间：${input.selectedAt}`,
+    ],
+    [
+      `# Selected branch plan: ${branch.title}`,
+      "",
+      `- Forecast id: ${forecast.forecastId}`,
+      `- Branch: ${branch.branchId}`,
+      `- Divergence: ${forecast.divergence}`,
+      `- Base chapter: ${forecast.baseChapter}`,
+      `- Selected at: ${input.selectedAt}`,
+    ],
+    [
+      `# Kế hoạch nhánh đã chọn: ${branch.title}`,
+      "",
+      `- ID dự báo: ${forecast.forecastId}`,
+      `- Nhánh: ${branch.branchId}`,
+      `- Điểm phân kỳ: ${forecast.divergence}`,
+      `- Chương gốc: ${forecast.baseChapter}`,
+      `- Thời điểm chọn: ${input.selectedAt}`,
+    ],
+  );
 
   const footer = zh
     ? "> 本计划不修改正史。要把它应用到大纲、章节意图或权威状态，需要另行确认的操作（v1 不自动执行）。"
-    : "> This plan does not modify canon. Applying it to the outline, chapter intents, or authoritative state is a separate, explicitly confirmed operation (not automated in v1).";
+    : lang === "vi"
+      ? "> Kế hoạch này không sửa chính sử. Việc áp dụng nó vào đề cương, ý định chương hoặc trạng thái chính sử là thao tác riêng, phải được xác nhận rõ ràng (không tự động hóa trong v1)."
+      : "> This plan does not modify canon. Applying it to the outline, chapter intents, or authoritative state is a separate, explicitly confirmed operation (not automated in v1).";
 
   return [
     ...header,
     ...(staleWarning ? ["", staleWarning] : []),
     "",
-    renderBranchSection(branch, zh, { headingLevel: 2, includeBranchId: false }),
+    renderBranchSection(branch, lang, { headingLevel: 2, includeBranchId: false }),
     "",
     footer,
   ].join("\n");
@@ -92,16 +128,18 @@ export function renderSelectedBranchPlanMarkdown(input: {
 
 function renderBranchSection(
   branch: ForecastBranch,
-  zh: boolean,
+  language: "zh" | "en" | "vi",
   options: { readonly headingLevel?: number; readonly includeBranchId?: boolean } = {},
 ): string {
   const level = "#".repeat(options.headingLevel ?? 2);
   const sub = `${level}#`;
   const heading = options.includeBranchId === false
     ? `${level} ${branch.title}`
-    : `${level} ${branch.branchId}：${branch.title}`;
+    : language === "vi"
+      ? `${level} ${branch.branchId}: ${branch.title}`
+      : `${level} ${branch.branchId}：${branch.title}`;
 
-  const labels = zh
+  const labels = language === "zh"
     ? {
         premise: "前提与假设",
         beats: "未来章节节拍",
@@ -117,21 +155,37 @@ function renderBranchSection(
         chapterPrefix: (n: number) => `第 ${n} 章`,
         none: "（无）",
       }
-    : {
-        premise: "Premise and assumptions",
-        beats: "Future chapter beats",
-        decisions: "Character decisions",
-        changes: "Projected changes",
-        characters: "Characters",
-        relationships: "Relationships",
-        world: "World",
-        hooks: "Hooks",
-        risks: "Consistency risks",
-        uncertainties: "Uncertainties",
-        alignment: "Author intent alignment",
-        chapterPrefix: (n: number) => `Chapter ${n}`,
-        none: "(none)",
-      };
+    : language === "vi"
+      ? {
+          premise: "Tiền đề và giả định",
+          beats: "Các nhịp chương tương lai",
+          decisions: "Quyết định nhân vật",
+          changes: "Thay đổi dự kiến",
+          characters: "Nhân vật",
+          relationships: "Quan hệ",
+          world: "Thế giới",
+          hooks: "Cốt truyện ngầm",
+          risks: "Rủi ro nhất quán",
+          uncertainties: "Bất định",
+          alignment: "Mức khớp ý định tác giả",
+          chapterPrefix: (n: number) => `Chương ${n}`,
+          none: "(không)",
+        }
+      : {
+          premise: "Premise and assumptions",
+          beats: "Future chapter beats",
+          decisions: "Character decisions",
+          changes: "Projected changes",
+          characters: "Characters",
+          relationships: "Relationships",
+          world: "World",
+          hooks: "Hooks",
+          risks: "Consistency risks",
+          uncertainties: "Uncertainties",
+          alignment: "Author intent alignment",
+          chapterPrefix: (n: number) => `Chapter ${n}`,
+          none: "(none)",
+        };
 
   const list = (items: ReadonlyArray<string>): string =>
     items.length > 0 ? items.map((item) => `- ${item}`).join("\n") : labels.none;

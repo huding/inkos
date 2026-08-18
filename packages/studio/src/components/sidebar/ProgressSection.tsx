@@ -5,29 +5,30 @@ import { cn } from "../../lib/utils";
 import { tr } from "../../lib/app-language";
 import { SidebarCard } from "./SidebarCard";
 
-// 每个步骤的 zh 文案同时也是与后台 SSE log 消息匹配的键（后台目前发中文消息）。
-// 展示时按当前语言取 zh/en，匹配时 zh、en 都认，后台消息以后双语化也不用改这里。
+// 每个步骤的 zh 文案同时也是与后台 SSE log 消息匹配的键（后台发中文/英文消息）。
+// 匹配时 zh、en、vi 都认。vi 显示用 en 文案（后台 runner.ts 对 vi 也发 en 消息）。
 interface ProgressStep {
   readonly zh: string;
   readonly en: string;
+  readonly vi?: string;
 }
 
 const INIT_BOOK_STEPS: ReadonlyArray<ProgressStep> = [
-  { zh: "生成基础设定", en: "Generate foundation" },
-  { zh: "保存书籍配置", en: "Save book config" },
-  { zh: "写入基础设定文件", en: "Write foundation files" },
-  { zh: "初始化控制文档", en: "Initialize control docs" },
-  { zh: "创建初始快照", en: "Create initial snapshot" },
+  { zh: "生成基础设定", en: "Generate foundation", vi: "Tạo nền tảng" },
+  { zh: "保存书籍配置", en: "Save book config", vi: "Lưu cấu hình sách" },
+  { zh: "写入基础设定文件", en: "Write foundation files", vi: "Ghi tệp nền tảng" },
+  { zh: "初始化控制文档", en: "Initialize control docs", vi: "Khởi tạo tài liệu điều khiển" },
+  { zh: "创建初始快照", en: "Create initial snapshot", vi: "Tạo snapshot ban đầu" },
 ];
 
 const WRITE_CHAPTER_STEPS: ReadonlyArray<ProgressStep> = [
-  { zh: "准备章节输入", en: "Prepare chapter input" },
-  { zh: "撰写章节草稿", en: "Draft the chapter" },
-  { zh: "落盘最终章节", en: "Save final chapter" },
-  { zh: "生成最终真相文件", en: "Generate final truth files" },
-  { zh: "校验真相文件变更", en: "Validate truth file changes" },
-  { zh: "同步记忆索引", en: "Sync memory index" },
-  { zh: "更新章节索引与快照", en: "Update chapter index and snapshot" },
+  { zh: "准备章节输入", en: "Prepare chapter input", vi: "Chuẩn bị đầu vào chương" },
+  { zh: "撰写章节草稿", en: "Draft the chapter", vi: "Viết bản nháp chương" },
+  { zh: "落盘最终章节", en: "Save final chapter", vi: "Lưu chương hoàn chỉnh" },
+  { zh: "生成最终真相文件", en: "Generate final truth files", vi: "Tạo tệp truth cuối" },
+  { zh: "校验真相文件变更", en: "Validate truth file changes", vi: "Xác thực thay đổi truth" },
+  { zh: "同步记忆索引", en: "Sync memory index", vi: "Đồng bộ chỉ mục bộ nhớ" },
+  { zh: "更新章节索引与快照", en: "Update chapter index and snapshot", vi: "Cập nhật chỉ mục & snapshot" },
 ];
 
 type StepStatus = "pending" | "active" | "done";
@@ -55,9 +56,9 @@ export function ProgressSection({ sse }: ProgressSectionProps) {
       setCompletedSteps(new Set());
       setActiveStep(null);
     } else if (last.event === "book:created" || last.event === "write:complete") {
-      // Mark all steps done (the set stores zh keys / raw backend messages)
+      // Mark all steps done (the set stores zh/en keys matching backend messages)
       const steps = operation === "init" ? INIT_BOOK_STEPS : WRITE_CHAPTER_STEPS;
-      setCompletedSteps(new Set(steps.map((s) => s.zh)));
+      setCompletedSteps(new Set(steps.flatMap((s) => [s.zh, s.en])));
       setActiveStep(null);
     } else if (last.event === "log") {
       const data = last.data as { message?: string } | null;
@@ -84,7 +85,7 @@ export function ProgressSection({ sse }: ProgressSectionProps) {
   if (!steps) return null;
 
   return (
-    <SidebarCard title={tr("执行", "Progress")}>
+    <SidebarCard title={tr("执行", "Progress", "Tiến trình")}>
       <ul className="space-y-2">
         {steps.map((step, i) => {
           const status: StepStatus =
@@ -100,7 +101,7 @@ export function ProgressSection({ sse }: ProgressSectionProps) {
                 status === "active" && "text-foreground font-medium",
                 status === "pending" && "text-muted-foreground/50",
               )}>
-                {tr(step.zh, step.en)}
+                {tr(step.zh, step.en, step.vi)}
               </span>
             </li>
           );

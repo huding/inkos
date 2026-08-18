@@ -14,19 +14,24 @@ export const initCommand = new Command("init")
     try {
       await mkdir(projectDir, { recursive: true });
       await initializeProjectDirectory(projectDir, {
-        language: (opts.lang === "en" ? "en" : "zh"),
+        language: (opts.lang === "en" ? "en" : opts.lang === "vi" ? "vi" : "zh"),
         overwriteSupportFiles: true,
       });
 
       log(`Project initialized at ${projectDir}`);
       log("");
-      const isEnglish = (opts.lang ?? "zh") === "en";
-      const exampleCreateLines = isEnglish
+      const lang = opts.lang ?? "vi";
+      const exampleCreateLines = lang === "en"
         ? ["  inkos book create --title 'My Novel' --genre progression --platform royalroad --lang en"]
-        : [
-          "  inkos book create --title '我的小说' --genre xuanhuan --platform tomato",
-          "  # English project? Re-run with: inkos init --lang en",
-        ];
+        : lang === "vi"
+          ? [
+            "  inkos book create --title 'Thiên Đạo Thư Viện' --genre xuanhuan --lang vi",
+            "  # Dùng tiếng Anh? Chạy lại với: inkos init --lang en",
+          ]
+          : [
+            "  inkos book create --title '我的小说' --genre xuanhuan --platform tomato",
+            "  # English project? Re-run with: inkos init --lang en",
+          ];
       if (global) {
         log("Global LLM config detected. Ready to go!");
         log("");

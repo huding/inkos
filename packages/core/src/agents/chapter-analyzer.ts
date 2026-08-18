@@ -131,11 +131,15 @@ export class ChapterAnalyzerAgent extends BaseAgent {
       bibleBlock: !governedMode && storyBible !== this.missingFilePlaceholder(resolvedLanguage)
         ? resolvedLanguage === "en"
           ? `\n## Story Bible\n${storyBible}\n`
+          : resolvedLanguage === "vi"
+          ? `\n## Story Bible\n${storyBible}\n`
           : `\n## 世界观设定\n${storyBible}\n`
         : "",
       outlineOrControlBlock: reducedControlBlock || (
         volumeOutline !== this.missingFilePlaceholder(resolvedLanguage)
           ? resolvedLanguage === "en"
+            ? `\n## Volume Outline\n${volumeOutline}\n`
+            : resolvedLanguage === "vi"
             ? `\n## Volume Outline\n${volumeOutline}\n`
             : `\n## 卷纲\n${volumeOutline}\n`
           : ""
@@ -145,6 +149,8 @@ export class ChapterAnalyzerAgent extends BaseAgent {
           hooksWorkingSet !== this.missingFilePlaceholder(resolvedLanguage)
             ? resolvedLanguage === "en"
               ? `\n## Current Hooks\n${hooksWorkingSet}\n`
+              : resolvedLanguage === "vi"
+              ? `\n## Current Hooks\n${hooksWorkingSet}\n`
               : `\n## 当前伏笔池\n${hooksWorkingSet}\n`
             : ""
         ),
@@ -153,6 +159,8 @@ export class ChapterAnalyzerAgent extends BaseAgent {
           chapterSummaries !== this.missingFilePlaceholder(resolvedLanguage)
             ? resolvedLanguage === "en"
               ? `\n## Existing Chapter Summaries\n${chapterSummaries}\n`
+              : resolvedLanguage === "vi"
+              ? `\n## Existing Chapter Summaries\n${chapterSummaries}\n`
               : `\n## 已有章节摘要\n${chapterSummaries}\n`
             : ""
         ),
@@ -160,15 +168,21 @@ export class ChapterAnalyzerAgent extends BaseAgent {
       subplotBlock: subplotWorkingSet !== this.missingFilePlaceholder(resolvedLanguage)
         ? resolvedLanguage === "en"
           ? `\n## Current Subplot Board\n${subplotWorkingSet}\n`
+          : resolvedLanguage === "vi"
+          ? `\n## Current Subplot Board\n${subplotWorkingSet}\n`
           : `\n## 当前支线进度板\n${subplotWorkingSet}\n`
         : "",
       emotionalBlock: emotionalWorkingSet !== this.missingFilePlaceholder(resolvedLanguage)
         ? resolvedLanguage === "en"
           ? `\n## Current Emotional Arcs\n${emotionalWorkingSet}\n`
+          : resolvedLanguage === "vi"
+          ? `\n## Current Emotional Arcs\n${emotionalWorkingSet}\n`
           : `\n## 当前情感弧线\n${emotionalWorkingSet}\n`
         : "",
       matrixBlock: matrixWorkingSet !== this.missingFilePlaceholder(resolvedLanguage)
         ? resolvedLanguage === "en"
+          ? `\n## Current Character Matrix\n${matrixWorkingSet}\n`
+          : resolvedLanguage === "vi"
           ? `\n## Current Character Matrix\n${matrixWorkingSet}\n`
           : `\n## 当前角色交互矩阵\n${matrixWorkingSet}\n`
         : "",
@@ -215,14 +229,17 @@ export class ChapterAnalyzerAgent extends BaseAgent {
     genreProfile: GenreProfile,
     genreBody: string,
     bookRulesBody: string,
-    language: "zh" | "en",
+    language: "zh" | "en" | "vi",
   ): string {
-    if (language === "en") {
+    if (language !== "zh") {
       const numericalBlock = genreProfile.numericalSystem
         ? "\n- This genre tracks numerical/resources systems; UPDATED_LEDGER must capture every resource change shown in the chapter."
         : "\n- This genre has no numerical system; leave UPDATED_LEDGER empty.";
+      const langOverride = language === "vi"
+        ? "【LANGUAGE OVERRIDE】ALL output MUST be in Vietnamese (Tiếng Việt). The === TAG === markers remain unchanged."
+        : "【LANGUAGE OVERRIDE】ALL output MUST be in English. The === TAG === markers remain unchanged.";
 
-      return `【LANGUAGE OVERRIDE】ALL output MUST be in English. The === TAG === markers remain unchanged.
+      return `${langOverride}
 
 You are a fiction continuity analyst. Analyze a finished chapter, extract every state change, and update the tracking files.
 
@@ -434,7 +451,7 @@ ${bookRulesBody ? `## 本书规则\n\n${bookRulesBody}` : ""}
   }
 
   private buildUserPrompt(params: {
-    readonly language: "zh" | "en";
+    readonly language: "zh" | "en" | "vi";
     readonly chapterNumber: number;
     readonly chapterContent: string;
     readonly chapterTitle?: string;
@@ -454,7 +471,7 @@ ${bookRulesBody ? `## 本书规则\n\n${bookRulesBody}` : ""}
     readonly bibleBlock: string;
     readonly outlineOrControlBlock: string;
   }): string {
-    if (params.language === "en") {
+    if (params.language !== "zh") {
       const titleLine = params.chapterTitle
         ? `Chapter Title: ${params.chapterTitle}\n`
         : "";
@@ -503,7 +520,7 @@ ${params.hooksBlock}${params.volumeSummariesBlock}${params.subplotBlock}${params
     chapterIntent: string,
     contextPackage: ContextPackage,
     ruleStack: RuleStack,
-    language: "zh" | "en",
+    language: "zh" | "en" | "vi",
   ): string {
     const selectedContext = contextPackage.selectedContext
       .map((entry) => `- ${entry.source}: ${entry.reason}${entry.excerpt ? ` | ${entry.excerpt}` : ""}`)
@@ -514,7 +531,7 @@ ${params.hooksBlock}${params.volumeSummariesBlock}${params.subplotBlock}${params
         .join("\n")
       : "- none";
 
-    return language === "en"
+    return language !== "zh"
       ? `\n## Chapter Control Inputs (compiled by Planner/Composer)
 ${chapterIntent}
 
@@ -579,13 +596,13 @@ ${overrides}\n`;
       mood: string;
       chapterType: string;
     }>,
-    language: "zh" | "en",
+    language: "zh" | "en" | "vi",
   ): string {
     if (summaries.length === 0) {
       return this.missingFilePlaceholder(language);
     }
 
-    const header = language === "en"
+    const header = language !== "zh"
       ? [
           "| Chapter | Title | Characters | Key Events | State Changes | Hook Activity | Mood | Chapter Type |",
           "| --- | --- | --- | --- | --- | --- | --- | --- |",
@@ -616,7 +633,7 @@ ${overrides}\n`;
     return value.replace(/\|/g, "\\|").replace(/\n/g, "<br>");
   }
 
-  private async readFileOrDefault(path: string, language: "zh" | "en"): Promise<string> {
+  private async readFileOrDefault(path: string, language: "zh" | "en" | "vi"): Promise<string> {
     try {
       return await readFile(path, "utf-8");
     } catch {
@@ -624,11 +641,11 @@ ${overrides}\n`;
     }
   }
 
-  private missingFilePlaceholder(language: "zh" | "en"): string {
-    return language === "en" ? "(file not created yet)" : "(文件尚未创建)";
+  private missingFilePlaceholder(language: "zh" | "en" | "vi"): string {
+    return language !== "zh" ? "(file not created yet)" : "(文件尚未创建)";
   }
 
-  private defaultChapterTitle(chapterNumber: number, language: "zh" | "en"): string {
-    return language === "en" ? `Chapter ${chapterNumber}` : `第${chapterNumber}章`;
+  private defaultChapterTitle(chapterNumber: number, language: "zh" | "en" | "vi"): string {
+    return language !== "zh" ? `Chapter ${chapterNumber}` : `第${chapterNumber}章`;
   }
 }

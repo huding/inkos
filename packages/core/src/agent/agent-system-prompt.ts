@@ -611,8 +611,15 @@ export function buildAgentSystemPrompt(
   options: AgentSystemPromptOptions = {},
 ): string {
   const isZh = language === "zh";
+  const isVi = language === "vi";
+
+  // Vietnamese output language hard constraint — appended to every prompt
+  const viSuffix = isVi
+    ? "\n\n## Output Language (hard constraint)\n\nAll story content, titles, chapter bodies, dialogue, narration, and inner monologue must be written in **Vietnamese**. This overrides every other default. Do NOT write story prose in English or Chinese."
+    : "";
+
   const withSkills = (prompt: string) => appendSkillGuidance(
-    prompt,
+    prompt + viSuffix,
     isZh,
     options.skills,
     options.allowIntentSkillSelection === true,

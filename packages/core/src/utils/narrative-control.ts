@@ -22,14 +22,14 @@ const EN_REPLACEMENTS: ReadonlyArray<[RegExp, string]> = [
 
 export function sanitizeNarrativeControlText(
   text: string,
-  language: "zh" | "en" = "zh",
+  language: "zh" | "en" | "vi" = "zh",
 ): string {
   let result = text;
 
-  result = result.replace(HOOK_ID_PATTERN, language === "en" ? "this thread" : "这条线索");
-  result = result.replace(HOOK_SLUG_PATTERN, language === "en" ? "this thread" : "这条线索");
+  result = result.replace(HOOK_ID_PATTERN, language === "zh" ? "这条线索" : language === "vi" ? "mạch truyện này" : "this thread");
+  result = result.replace(HOOK_SLUG_PATTERN, language === "zh" ? "这条线索" : language === "vi" ? "mạch truyện này" : "this thread");
   for (const pattern of CHAPTER_REF_PATTERNS) {
-    result = result.replace(pattern, language === "en" ? "an earlier scene" : "此前");
+    result = result.replace(pattern, language === "zh" ? "此前" : language === "vi" ? "một cảnh trước đó" : "an earlier scene");
   }
 
   for (const [pattern, replacement] of [...ZH_REPLACEMENTS, ...EN_REPLACEMENTS]) {
@@ -51,7 +51,7 @@ export function sanitizeNarrativeControlText(
 export function renderMemoAsNarrativeBlock(
   memo: ChapterMemo,
   intent: ChapterIntent | undefined,
-  language: "zh" | "en" = "zh",
+  language: "zh" | "en" | "vi" = "zh",
 ): string {
   const s = (text: string) => sanitizeNarrativeControlText(text, language);
   const isEn = language === "en";
@@ -84,15 +84,15 @@ export function renderMemoAsNarrativeBlock(
 
 export function buildNarrativeIntentBrief(
   chapterIntent: string,
-  language: "zh" | "en" = "zh",
+  language: "zh" | "en" | "vi" = "zh",
 ): string {
   const sections = [
-    { heading: "## Goal", label: language === "en" ? "Goal" : "目标" },
-    { heading: "## Outline Node", label: language === "en" ? "Outline Node" : "当前节点" },
-    { heading: "## Must Keep", label: language === "en" ? "Keep" : "保留" },
-    { heading: "## Must Avoid", label: language === "en" ? "Avoid" : "避免" },
-    { heading: "## Style Emphasis", label: language === "en" ? "Style" : "风格" },
-    { heading: "## Structured Directives", label: language === "en" ? "Directives" : "指令" },
+    { heading: "## Goal", label: language === "zh" ? "目标" : language === "vi" ? "Mục tiêu" : "Goal" },
+    { heading: "## Outline Node", label: language === "zh" ? "当前节点" : language === "vi" ? "Nút phác thảo" : "Outline Node" },
+    { heading: "## Must Keep", label: language === "zh" ? "保留" : language === "vi" ? "Giữ lại" : "Keep" },
+    { heading: "## Must Avoid", label: language === "zh" ? "避免" : language === "vi" ? "Tránh" : "Avoid" },
+    { heading: "## Style Emphasis", label: language === "zh" ? "风格" : language === "vi" ? "Phong cách" : "Style" },
+    { heading: "## Structured Directives", label: language === "zh" ? "指令" : language === "vi" ? "Chỉ thị" : "Directives" },
   ] as const;
 
   const rendered = sections
@@ -123,11 +123,11 @@ export function buildNarrativeIntentBrief(
 
 export function renderNarrativeSelectedContext(
   entries: ReadonlyArray<ContextPackage["selectedContext"][number]>,
-  language: "zh" | "en" = "zh",
+  language: "zh" | "en" | "vi" = "zh",
 ): string {
   const heading = language === "en" ? "Evidence" : "证据";
-  const reasonLabel = language === "en" ? "reason" : "原因";
-  const detailLabel = language === "en" ? "detail" : "细节";
+  const reasonLabel = language === "zh" ? "原因" : language === "vi" ? "lý do" : "reason";
+  const detailLabel = language === "zh" ? "细节" : language === "vi" ? "chi tiết" : "detail";
 
   return entries
     .map((entry, index) => {
@@ -143,7 +143,7 @@ export function renderNarrativeSelectedContext(
 
 export function sanitizeNarrativeEvidenceBlock(
   block: string | undefined,
-  language: "zh" | "en" = "zh",
+  language: "zh" | "en" | "vi" = "zh",
 ): string | undefined {
   if (!block) return undefined;
   const withoutSources = block.replace(

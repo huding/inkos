@@ -84,7 +84,7 @@ function buildTieredIssueList(
   return parts.join("\n\n");
 }
 
-const MODE_DESCRIPTIONS: Record<ReviseMode, string> = {
+const MODE_DESCRIPTIONS_ZH: Record<ReviseMode, string> = {
   auto: "", // auto mode uses buildAutoSystemPrompt instead
   polish: "润色：只改表达、节奏、段落呼吸，不改事实与剧情结论。禁止：增删段落、改变人名/地名/物品名、增加新情节或新对话、改变因果关系。只允许：替换用词、调整句序、修改标点节奏",
   rewrite: "改写：允许重组问题段落、调整画面和叙述力度，但优先保留原文的绝大部分句段。除非问题跨越整章，否则禁止整章推倒重写；只能围绕问题段落及其直接上下文改写，同时保留核心事实与人物动机",
@@ -102,6 +102,24 @@ const MODE_DESCRIPTIONS: Record<ReviseMode, string> = {
 8. 段落长度差异化：不再等长段落，有的段只有一句话，有的段七八行
 9. 消灭"不禁""仿佛""宛如"等AI标记词：换成具体感官描写`,
   "spot-fix": "定点修复：只修改审稿意见指出的具体句子或段落，其余所有内容必须原封不动保留。修改范围限定在问题句子及其前后各一句。禁止改动无关段落",
+};
+
+const MODE_DESCRIPTIONS_EN: Record<ReviseMode, string> = {
+  auto: "",
+  polish: "Polish: adjust expression, rhythm, and paragraph breathing only — do not change facts or plot conclusions. Prohibited: adding/removing paragraphs, changing names/places/objects, adding new scenes or dialogue, altering causality. Allowed only: word substitution, sentence reordering, punctuation rhythm.",
+  rewrite: "Rewrite: allowed to restructure problem paragraphs and adjust scene force, but preserve the vast majority of the original text. Do not rewrite the whole chapter unless the problem spans the entire chapter — work only around the problem paragraph and its direct context, preserving core facts and character motivations.",
+  rework: "Rework: may restructure scene progression and conflict organisation, but do not change the core setting or major story-event outcomes.",
+  "anti-detect": `Anti-detect rewrite: reduce AI-generation detectability while keeping the plot unchanged.
+
+Techniques:
+1. Break sentence patterns: consecutive short sentences → alternating long/short, unpredictable structure
+2. Colloquialise: ✗"However things were not so simple" → ✓"Nothing comes that easy"
+3. Reduce filler transitions: ✗"Although…but…" → ✓ character internal monologue or direct action cut
+4. Externalise emotion: ✗"He felt angry" → ✓"He crushed the teacup; scalding water ran between his fingers"
+5. Delete narrator conclusions: ✗"At that moment he finally understood power" → ✓ only write action, let the reader feel it
+6. Vary paragraph length: no equal-length paragraphs — some one sentence, some seven or eight lines
+7. Eliminate AI marker words ("as if", "seemed", "somehow"): replace with concrete sensory description`,
+  "spot-fix": "Spot-fix: modify only the specific sentence or paragraph identified in the audit. All other content must remain exactly as-is. Scope is limited to the problem sentence plus one sentence before and after. Do not touch unrelated paragraphs.",
 };
 
 export class ReviserAgent extends BaseAgent {
@@ -165,8 +183,9 @@ export class ReviserAgent extends BaseAgent {
       ? styleGuideRaw
       : (legacyRulesBody || "(无文风指南)");
 
-    const isEnglish = (bookLanguage ?? gp.language) === "en";
-    const resolvedLanguage = isEnglish ? "en" : "zh";
+    const resolvedLang = bookLanguage ?? gp.language;
+    const isEnglish = resolvedLang !== "zh";
+    const resolvedLanguage = resolvedLang === "en" ? "en" : resolvedLang === "vi" ? "vi" : "zh";
 
     const issueList = mode === "auto"
       ? buildTieredIssueList(issues, isEnglish)
@@ -191,7 +210,9 @@ export class ReviserAgent extends BaseAgent {
           ? "\n8. Keep the chapter word count within the target range; only allow minor deviation when fixing critical issues truly requires it"
           : "\n8. 保持章节字数在目标区间内；只有在修复关键问题确实需要时才允许轻微偏离")
       : "";
-    const langPrefix = isEnglish
+    const langPrefix = resolvedLanguage === "vi"
+      ? `【LANGUAGE OVERRIDE】ALL output (FIXED_ISSUES, PATCHES, REVISED_CONTENT) MUST be in Vietnamese (Tiếng Việt).\n\n`
+      : isEnglish
       ? `【LANGUAGE OVERRIDE】ALL output (FIXED_ISSUES, PATCHES, REVISED_CONTENT) MUST be in English.\n\n`
       : "";
     const governedMode = Boolean(options?.chapterIntent && options?.contextPackage && options?.ruleStack);
@@ -222,26 +243,26 @@ export class ReviserAgent extends BaseAgent {
     const systemPrompt = await this.withPromptPackGuidance(systemPromptBase, "longform.reviser");
 
     const ledgerBlock = gp.numericalSystem
-      ? `\n## 资源账本\n${ledger}`
+      ? isEnglish ? `\n## Resource Ledger\n${ledger}` : `\n## 资源账本\n${ledger}`
       : "";
     const governedMemoryBlocks = options?.contextPackage
       ? buildGovernedMemoryEvidenceBlocks(options.contextPackage, resolvedLanguage)
       : undefined;
     const hookDebtBlock = governedMemoryBlocks?.hookDebtBlock ?? "";
     const hooksBlock = governedMemoryBlocks?.hooksBlock
-      ?? `\n## 伏笔池\n${hooksWorkingSet}\n`;
+      ?? (isEnglish ? `\n## Pending Hooks\n${hooksWorkingSet}\n` : `\n## 伏笔池\n${hooksWorkingSet}\n`);
     const outlineBlock = volumeOutline !== "(文件不存在)"
-      ? `\n## 卷纲\n${volumeOutline}\n`
+      ? isEnglish ? `\n## Volume Outline\n${volumeOutline}\n` : `\n## 卷纲\n${volumeOutline}\n`
       : "";
     const bibleBlock = !governedMode && storyBible !== "(文件不存在)"
-      ? `\n## 世界观设定\n${storyBible}\n`
+      ? isEnglish ? `\n## Story Bible\n${storyBible}\n` : `\n## 世界观设定\n${storyBible}\n`
       : "";
     const matrixBlock = characterMatrixWorkingSet !== "(文件不存在)"
-      ? `\n## 角色交互矩阵\n${characterMatrixWorkingSet}\n`
+      ? isEnglish ? `\n## Character Matrix\n${characterMatrixWorkingSet}\n` : `\n## 角色交互矩阵\n${characterMatrixWorkingSet}\n`
       : "";
     const summariesBlock = governedMemoryBlocks?.summariesBlock
       ?? (chapterSummariesWorkingSet !== "(文件不存在)"
-        ? `\n## 章节摘要\n${chapterSummariesWorkingSet}\n`
+        ? isEnglish ? `\n## Chapter Summaries\n${chapterSummariesWorkingSet}\n` : `\n## 章节摘要\n${chapterSummariesWorkingSet}\n`
         : "");
     const volumeSummariesBlock = governedMemoryBlocks?.volumeSummariesBlock ?? "";
 
@@ -249,24 +270,43 @@ export class ReviserAgent extends BaseAgent {
     const hasFanficCanon = fanficCanon !== "(文件不存在)";
 
     const canonBlock = hasParentCanon
-      ? `\n## 正传正典参照（修稿专用）\n本书为番外作品。修改时参照正典约束，不可改变正典事实。\n${parentCanon}\n`
+      ? isEnglish
+        ? `\n## Parent Canon Reference (revision use)\nThis is a side-story. During revision, reference the parent canon constraints — do not alter parent canon facts.\n${parentCanon}\n`
+        : `\n## 正传正典参照（修稿专用）\n本书为番外作品。修改时参照正典约束，不可改变正典事实。\n${parentCanon}\n`
       : "";
 
     const fanficCanonBlock = hasFanficCanon
-      ? `\n## 同人正典参照（修稿专用）\n本书为同人作品。修改时参照正典角色档案和世界规则，不可违反正典事实。角色对话必须保留原作语癖。\n${fanficCanon}\n`
+      ? isEnglish
+        ? `\n## Fanfic Canon Reference (revision use)\nThis is a fanfiction. During revision, follow canon character profiles and world rules — do not violate canon facts. Character dialogue must preserve the original speech patterns.\n${fanficCanon}\n`
+        : `\n## 同人正典参照（修稿专用）\n本书为同人作品。修改时参照正典角色档案和世界规则，不可违反正典事实。角色对话必须保留原作语癖。\n${fanficCanon}\n`
       : "";
     const reducedControlBlock = options?.contextPackage && options.ruleStack
-      ? this.buildReducedControlBlock(options.chapterMemo, options.chapterIntentData, options.chapterIntent, options.contextPackage, options.ruleStack)
+      ? this.buildReducedControlBlock(options.chapterMemo, options.chapterIntentData, options.chapterIntent, options.contextPackage, options.ruleStack, isEnglish)
       : "";
     // Length guardrail only in legacy modes — auto mode delegates length to normalize.
     const lengthGuidanceBlock = mode !== "auto" && options?.lengthSpec
-      ? `\n## 字数护栏\n目标字数：${options.lengthSpec.target}\n允许区间：${options.lengthSpec.softMin}-${options.lengthSpec.softMax}\n极限区间：${options.lengthSpec.hardMin}-${options.lengthSpec.hardMax}\n如果修正后超出允许区间，请优先压缩冗余解释、重复动作和弱信息句，不得新增支线或删掉核心事实。\n`
+      ? isEnglish
+        ? `\n## Length Guardrail\nTarget: ${options.lengthSpec.target}\nAllowed range: ${options.lengthSpec.softMin}-${options.lengthSpec.softMax}\nHard limit: ${options.lengthSpec.hardMin}-${options.lengthSpec.hardMax}\nIf the revision exceeds the allowed range, compress redundant explanations, repeated actions, and weak-information sentences first — do not add subplots or delete core facts.\n`
+        : `\n## 字数护栏\n目标字数：${options.lengthSpec.target}\n允许区间：${options.lengthSpec.softMin}-${options.lengthSpec.softMax}\n极限区间：${options.lengthSpec.hardMin}-${options.lengthSpec.hardMax}\n如果修正后超出允许区间，请优先压缩冗余解释、重复动作和弱信息句，不得新增支线或删掉核心事实。\n`
       : "";
     const styleGuideBlock = reducedControlBlock.length === 0
-      ? `\n## 文风指南\n${styleGuide}`
+      ? isEnglish ? `\n## Style Guide\n${styleGuide}` : `\n## 文风指南\n${styleGuide}`
       : "";
 
-    const userPrompt = `请修正第${chapterNumber}章。
+    const userPrompt = isEnglish
+      ? `Revise chapter ${chapterNumber}.
+
+## Audit Issues
+${issueList}
+
+## Current State
+${currentState}
+${ledgerBlock}
+${sanitizeNarrativeEvidenceBlock(hookDebtBlock, resolvedLanguage) ?? ""}${sanitizeNarrativeEvidenceBlock(hooksBlock, resolvedLanguage) ?? ""}${sanitizeNarrativeEvidenceBlock(volumeSummariesBlock, resolvedLanguage) ?? ""}${reducedControlBlock || outlineBlock}${bibleBlock}${matrixBlock}${sanitizeNarrativeEvidenceBlock(summariesBlock, resolvedLanguage) ?? ""}${canonBlock}${fanficCanonBlock}${styleGuideBlock}${lengthGuidanceBlock}
+
+## Chapter to revise
+${chapterContent}`
+      : `请修正第${chapterNumber}章。
 
 ## 审稿问题
 ${issueList}
@@ -388,13 +428,13 @@ ${chapterContent}`;
     protagonistBlock: string;
     numericalRule: string;
     lengthGuardrail: string;
-    resolvedLanguage: "zh" | "en";
+    resolvedLanguage: "zh" | "en" | "vi";
     lengthSpec?: LengthSpec;
     autoOutputMode: AutoOutputMode;
   }): string {
     const { langPrefix, gp, protagonistBlock, numericalRule, resolvedLanguage, lengthSpec, autoOutputMode } = params;
     // lengthGuardrail intentionally not used in auto mode — length constraint is embedded in REVISED_CONTENT description
-    const en = resolvedLanguage === "en";
+    const en = resolvedLanguage !== "zh"; // true for both "en" and "vi"
     const rewriteLengthConstraint = lengthSpec
       ? (en
           ? `\n  HARD CONSTRAINT: The revised chapter must stay within ${lengthSpec.softMin}-${lengthSpec.softMax} characters (target: ${lengthSpec.target}, ±25%). This is non-negotiable — do not exceed this range.`
@@ -506,11 +546,29 @@ REPLACEMENT_TEXT:
     numericalRule: string;
     lengthGuardrail: string;
     mode: ReviseMode;
-    resolvedLanguage: "zh" | "en";
+    resolvedLanguage: "zh" | "en" | "vi";
   }): string {
-    const { langPrefix, gp, protagonistBlock, numericalRule, lengthGuardrail, mode } = params;
-    const modeDesc = MODE_DESCRIPTIONS[mode];
-    const outputFormat = mode === "spot-fix"
+    const { langPrefix, gp, protagonistBlock, numericalRule, lengthGuardrail, mode, resolvedLanguage } = params;
+    const isEn = resolvedLanguage !== "zh";
+    const modeDesc = isEn ? MODE_DESCRIPTIONS_EN[mode] : MODE_DESCRIPTIONS_ZH[mode];
+    const outputFormat = isEn
+      ? mode === "spot-fix"
+        ? `=== FIXED_ISSUES ===
+(List what was fixed, one per line; if safe spot-fix is not possible, explain here)
+
+=== PATCHES ===
+--- PATCH 1 ---
+TARGET_TEXT:
+(Exact copy from original — must uniquely match)
+REPLACEMENT_TEXT:
+(Replacement text)
+--- END PATCH ---`
+        : `=== FIXED_ISSUES ===
+(List what was fixed, one per line)
+
+=== REVISED_CONTENT ===
+(Complete revised body text)`
+      : mode === "spot-fix"
       ? `=== FIXED_ISSUES ===
 (逐条说明修正了什么，一行一条；如果无法安全定点修复，也在这里说明)
 
@@ -527,7 +585,24 @@ REPLACEMENT_TEXT:
 === REVISED_CONTENT ===
 (修正后的完整正文)`;
 
-    return `${langPrefix}你是一位专业的${gp.name}网络小说修稿编辑。你的任务是根据审稿意见对章节进行修正。${protagonistBlock}
+    return isEn
+      ? `${langPrefix}You are a professional ${gp.name} web-fiction revision editor. Your task is to revise the chapter according to the audit issues.${protagonistBlock}
+
+Revision mode: ${modeDesc}
+
+Revision principles:
+1. Control scope of changes according to the mode
+2. Fix root causes — no surface-level polishing${numericalRule}
+4. Body text must comply with established facts and hook constraints; do not output or rewrite state files — the host will re-settle based on the revised text
+5. Do not change the plot direction or core conflict
+6. Preserve the original language style and rhythm
+${lengthGuardrail}
+${mode === "spot-fix" ? "\n9. spot-fix may only output local patches — full-chapter rewrites are prohibited; TARGET_TEXT must uniquely match in the original\n10. If large-scale rewriting is needed, state that safe spot-fix is not possible and leave PATCHES empty" : ""}
+
+Output format:
+
+${outputFormat}`
+      : `${langPrefix}你是一位专业的${gp.name}网络小说修稿编辑。你的任务是根据审稿意见对章节进行修正。${protagonistBlock}
 
 修稿模式：${modeDesc}
 
@@ -568,8 +643,10 @@ ${outputFormat}`;
     chapterIntent: string | undefined,
     contextPackage: ContextPackage,
     ruleStack: RuleStack,
+    isEnglish = false,
   ): string {
-    const selectedContext = renderNarrativeSelectedContext(contextPackage.selectedContext, "zh")
+    const lang = isEnglish ? "en" : "zh";
+    const selectedContext = renderNarrativeSelectedContext(contextPackage.selectedContext, lang)
       .replace(/^### /gm, "- ");
     const overrides = ruleStack.activeOverrides.length > 0
       ? ruleStack.activeOverrides
@@ -578,24 +655,14 @@ ${outputFormat}`;
       : "- none";
     // Prefer memo-based narrative block; fall back to legacy intent markdown
     const narrativeBlock = memo
-      ? renderMemoAsNarrativeBlock(memo, intent, "zh")
+      ? renderMemoAsNarrativeBlock(memo, intent, lang)
       : chapterIntent
-        ? buildNarrativeIntentBrief(chapterIntent, "zh")
-        : "(无)";
+        ? buildNarrativeIntentBrief(chapterIntent, lang)
+        : isEnglish ? "(none)" : "(无)";
 
-    return `\n## 本章控制输入（由 Planner/Composer 编译）
-${narrativeBlock}
-
-### 已选上下文
-${selectedContext || "- none"}
-
-### 规则栈
-- 硬护栏：${ruleStack.sections.hard.join("、") || "(无)"}
-- 软约束：${ruleStack.sections.soft.join("、") || "(无)"}
-- 诊断规则：${ruleStack.sections.diagnostic.join("、") || "(无)"}
-
-### 当前覆盖
-${overrides}\n`;
+    return isEnglish
+      ? `\n## Chapter Control Inputs (compiled by Planner/Composer)\n${narrativeBlock}\n\n### Selected Context\n${selectedContext || "- none"}\n\n### Rule Stack\n- Hard rails: ${ruleStack.sections.hard.join(", ") || "(none)"}\n- Soft constraints: ${ruleStack.sections.soft.join(", ") || "(none)"}\n- Diagnostic rules: ${ruleStack.sections.diagnostic.join(", ") || "(none)"}\n\n### Active Overrides\n${overrides}\n`
+      : `\n## 本章控制输入（由 Planner/Composer 编译）\n${narrativeBlock}\n\n### 已选上下文\n${selectedContext || "- none"}\n\n### 规则栈\n- 硬护栏：${ruleStack.sections.hard.join("、") || "(无)"}\n- 软约束：${ruleStack.sections.soft.join("、") || "(无)"}\n- 诊断规则：${ruleStack.sections.diagnostic.join("、") || "(无)"}\n\n### 当前覆盖\n${overrides}\n`;
   }
 }
 

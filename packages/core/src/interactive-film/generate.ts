@@ -24,7 +24,7 @@ export async function generateStoryGraph(
   input: GenerateStoryGraphInput,
   options?: {
     readonly maxTokens?: number;
-    readonly language?: "zh" | "en";
+    readonly language?: "zh" | "en" | "vi";
     readonly activatedSkills?: ReadonlyArray<ActivatedSkillGuidance>;
     readonly signal?: AbortSignal;
   },
@@ -39,7 +39,7 @@ export async function generateStoryGraph(
     { role: "user", content: userPrompt },
   ], options?.activatedSkills), {
     name: "submit_story_graph",
-    label: language === "en" ? "Submit Story Graph" : "提交故事图谱",
+    label: language === "zh" ? "提交故事图谱" : language === "vi" ? "Gửi đồ thị câu chuyện" : "Submit Story Graph",
     description: language === "en"
       ? "Submit the complete playable branching graph. The host owns the project id, schema version, and title."
       : "提交完整可玩的分支图。项目 id、schema 版本和标题由宿主负责。",

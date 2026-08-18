@@ -1,10 +1,10 @@
 import { useState } from "react";
 
-export function LanguageSelector({ onSelect }: { onSelect: (lang: "zh" | "en") => void }) {
-  const [hovering, setHovering] = useState<"zh" | "en" | null>(null);
-  const [selected, setSelected] = useState<"zh" | "en" | null>(null);
+export function LanguageSelector({ onSelect }: { onSelect: (lang: "zh" | "en" | "vi") => void }) {
+  const [hovering, setHovering] = useState<"zh" | "en" | "vi" | null>(null);
+  const [selected, setSelected] = useState<"zh" | "en" | "vi" | null>(null);
 
-  const handleSelect = (lang: "zh" | "en") => {
+  const handleSelect = (lang: "zh" | "en" | "vi") => {
     setSelected(lang);
     // Brief pause for the selection animation before transitioning
     setTimeout(() => onSelect(lang), 400);
@@ -21,13 +21,13 @@ export function LanguageSelector({ onSelect }: { onSelect: (lang: "zh" | "en") =
         <div className="text-base text-muted-foreground tracking-widest uppercase">Studio</div>
       </div>
 
-      {/* Language cards — generous, distinct, immersive */}
-      <div className="flex gap-8 mb-16">
+      {/* Language cards */}
+      <div className="flex gap-8 mb-16 flex-wrap justify-center">
         <button
           onClick={() => handleSelect("zh")}
           onMouseEnter={() => setHovering("zh")}
           onMouseLeave={() => setHovering(null)}
-          className={`group w-80 border rounded-lg p-10 text-left transition-all duration-300 ${
+          className={`group w-72 border rounded-lg p-10 text-left transition-all duration-300 ${
             selected === "zh"
               ? "border-primary bg-primary/10 scale-[1.02]"
               : hovering === "zh"
@@ -48,7 +48,7 @@ export function LanguageSelector({ onSelect }: { onSelect: (lang: "zh" | "en") =
           onClick={() => handleSelect("en")}
           onMouseEnter={() => setHovering("en")}
           onMouseLeave={() => setHovering(null)}
-          className={`group w-80 border rounded-lg p-10 text-left transition-all duration-300 ${
+          className={`group w-72 border rounded-lg p-10 text-left transition-all duration-300 ${
             selected === "en"
               ? "border-primary bg-primary/10 scale-[1.02]"
               : hovering === "en"
@@ -64,10 +64,31 @@ export function LanguageSelector({ onSelect }: { onSelect: (lang: "zh" | "en") =
             Royal Road · Kindle Unlimited · Scribble Hub
           </div>
         </button>
+
+        <button
+          onClick={() => handleSelect("vi")}
+          onMouseEnter={() => setHovering("vi")}
+          onMouseLeave={() => setHovering(null)}
+          className={`group w-72 border rounded-lg p-10 text-left transition-all duration-300 ${
+            selected === "vi"
+              ? "border-primary bg-primary/10 scale-[1.02]"
+              : hovering === "vi"
+                ? "border-primary/50 bg-card"
+                : "border-border bg-card/50"
+          }`}
+        >
+          <div className="font-serif text-3xl mb-4 text-foreground">Sáng tác Việt</div>
+          <div className="text-base text-foreground/70 leading-relaxed mb-6">
+            Tiên hiệp · Hệ thống · Đô thị · Huyền huyễn · Tổng hợp
+          </div>
+          <div className="text-sm text-muted-foreground">
+            Wattpad · TruyenFull · TikTok Sáng Tạo
+          </div>
+        </button>
       </div>
 
       <div className="text-sm text-muted-foreground">
-        可在设置中更改 · Can be changed in Settings
+        可在设置中更改 · Can be changed in Settings · Có thể đổi trong Cài đặt
       </div>
     </div>
   );

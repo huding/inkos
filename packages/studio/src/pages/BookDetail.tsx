@@ -1,4 +1,5 @@
 import { fetchJson, useApi, postApi } from "../hooks/use-api";
+import { tr } from "../lib/app-language";
 import { useEffect, useMemo, useState } from "react";
 import type { Theme } from "../hooks/use-theme";
 import type { TFunction } from "../hooks/use-i18n";
@@ -202,9 +203,7 @@ export function BookDetail({
 
   const handleRewrite = async (chapterNum: number) => {
     const brief = window.prompt(
-      data?.book.language === "en"
-        ? "Optional rewrite brief for this run only. Leave blank to use existing focus."
-        : "可选：输入这次重写要遵循的补充想法。留空则沿用现有 focus。",
+      tr("可选：输入这次重写要遵循的补充想法。留空则沿用现有 focus。", "Optional rewrite brief for this run only. Leave blank to use existing focus.", "Tùy chọn: nhập ý tưởng bổ sung cho lần viết lại này. Để trống để dùng focus hiện tại."),
       "",
     );
     if (brief === null) return;
@@ -225,9 +224,7 @@ export function BookDetail({
 
   const handleRevise = async (chapterNum: number, mode: ReviseMode) => {
     const brief = window.prompt(
-      data?.book.language === "en"
-        ? "Optional revise brief for this run only. Leave blank to use existing focus."
-        : "可选：输入这次修订要遵循的补充想法。留空则沿用现有 focus。",
+      tr("可选：输入这次修订要遵循的补充想法。留空则沿用现有 focus。", "Optional revise brief for this run only. Leave blank to use existing focus.", "Tùy chọn: nhập ý tưởng bổ sung cho lần sửa đổi này. Để trống để dùng focus hiện tại."),
       "",
     );
     if (brief === null) return;
@@ -248,9 +245,7 @@ export function BookDetail({
 
   const handleSync = async (chapterNum: number) => {
     const brief = window.prompt(
-      data?.book.language === "en"
-        ? "Optional sync brief for interpreting the edited chapter body. Leave blank to sync directly from the text."
-        : "可选：输入这次同步时要遵循的补充说明。留空则直接按正文同步。",
+      tr("可选：输入这次同步时要遵循的补充说明。留空则直接按正文同步。", "Optional sync brief for interpreting the edited chapter body. Leave blank to sync directly from the text.", "Tùy chọn: nhập ghi chú bổ sung cho lần đồng bộ này. Để trống để đồng bộ thẳng từ văn bản."),
       "",
     );
     if (brief === null) return;
@@ -347,15 +342,13 @@ export function BookDetail({
       });
       return data?.book.language === "en"
         ? `Consolidated ${result.archivedVolumes ?? 0} volume(s). Retained ${result.retainedChapters ?? 0} recent chapter summaries.`
-        : `已归并 ${result.archivedVolumes ?? 0} 个卷摘要，保留最近 ${result.retainedChapters ?? 0} 条章节摘要。`;
+        : tr(`已归并 ${result.archivedVolumes ?? 0} 个卷摘要，保留最近 ${result.retainedChapters ?? 0} 条章节摘要。`, `Consolidated ${result.archivedVolumes ?? 0} volume(s). Retained ${result.retainedChapters ?? 0} recent chapter summaries.`, `Đã gộp ${result.archivedVolumes ?? 0} tập, giữ ${result.retainedChapters ?? 0} tóm tắt chương gần nhất.`);
     });
   };
 
   const handleReviseFoundation = async () => {
     const feedback = window.prompt(
-      data?.book.language === "en"
-        ? "Foundation revision feedback. This rewrites the book foundation, not chapter body."
-        : "输入重修基础设定的反馈。此操作会重写基础设定，不直接改正文。",
+      tr("输入重修基础设定的反馈。此操作会重写基础设定，不直接改正文。", "Foundation revision feedback. This rewrites the book foundation, not chapter body.", "Nhập phản hồi để sửa lại cơ sở. Thao tác này viết lại cơ sở, không thay đổi nội dung chương."),
       "",
     );
     if (!feedback?.trim()) return;
@@ -365,15 +358,13 @@ export function BookDetail({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ feedback }),
       });
-      return data?.book.language === "en" ? "Foundation revised." : "基础设定已重修。";
+      return data?.book.language === "en" ? "Foundation revised." : tr("基础设定已重修。", "Foundation revised.", "Cơ sở đã được sửa lại.");
     });
   };
 
   const handlePlan = async () => {
     const context = window.prompt(
-      data?.book.language === "en"
-        ? "Optional planning context for the next chapter."
-        : "可选：下一章规划补充说明。",
+      tr("可选：下一章规划补充说明。", "Optional planning context for the next chapter.", "Tùy chọn: ghi chú bổ sung cho việc lên kế hoạch chương tiếp theo."),
       "",
     );
     if (context === null) return;
@@ -385,15 +376,13 @@ export function BookDetail({
       });
       return data?.book.language === "en"
         ? `Planned chapter ${result.chapterNumber ?? "?"}: ${result.title ?? ""}`
-        : `已计划第 ${result.chapterNumber ?? "?"} 章：${result.title ?? ""}`;
+        : tr(`已计划第 ${result.chapterNumber ?? "?"} 章：${result.title ?? ""}`, `Planned chapter ${result.chapterNumber ?? "?"}: ${result.title ?? ""}`, `Đã lên kế hoạch chương ${result.chapterNumber ?? "?"}: ${result.title ?? ""}`);
     });
   };
 
   const handleCompose = async () => {
     const context = window.prompt(
-      data?.book.language === "en"
-        ? "Optional compose context for the next chapter."
-        : "可选：下一章组装补充说明。",
+      tr("可选：下一章组装补充说明。", "Optional compose context for the next chapter.", "Tùy chọn: ghi chú bổ sung cho việc lắp ghép chương tiếp theo."),
       "",
     );
     if (context === null) return;
@@ -405,14 +394,14 @@ export function BookDetail({
       });
       return data?.book.language === "en"
         ? `Composed chapter ${result.chapterNumber ?? "?"}: ${result.title ?? ""}`
-        : `已组装第 ${result.chapterNumber ?? "?"} 章：${result.title ?? ""}`;
+        : tr(`已组装第 ${result.chapterNumber ?? "?"} 章：${result.title ?? ""}`, `Composed chapter ${result.chapterNumber ?? "?"}: ${result.title ?? ""}`, `Đã lắp ghép chương ${result.chapterNumber ?? "?"}: ${result.title ?? ""}`);
     });
   };
 
   const handleRepairState = async (chapterNum: number) => {
     await runBookAction(`repair-state-${chapterNum}`, async () => {
       await fetchJson(`/books/${bookId}/repair-state/${chapterNum}`, { method: "POST" });
-      return data?.book.language === "en" ? `Chapter ${chapterNum} state repaired.` : `第 ${chapterNum} 章状态已修复。`;
+      return data?.book.language === "en" ? `Chapter ${chapterNum} state repaired.` : tr(`第 ${chapterNum} 章状态已修复。`, `Chapter ${chapterNum} state repaired.`, `Trạng thái chương ${chapterNum} đã được sửa.`);
     });
   };
 
@@ -499,12 +488,12 @@ export function BookDetail({
           <button
             onClick={handleToggleReviewMode}
             title={reviewMode === "manual"
-              ? "手动审查：写完即停，由你点 审稿/修订/通过（更快、更可控）。点此切回自动。"
-              : "自动审查：写完自动审校并按需重写（更省心，但更慢）。点此切到手动·写完即停。"}
+              ? tr("手动审查：写完即停，由你点 审稿/修订/通过（更快、更可控）。点此切回自动。", "Manual review: stop after writing, you click Review/Revise/Approve (faster, more control). Click to switch to auto.", "Kiểm duyệt thủ công: dừng sau khi viết, bạn nhấn Xem/Sửa/Duyệt (nhanh hơn, kiểm soát hơn). Nhấn để chuyển sang tự động.")
+              : tr("自动审查：写完自动审校并按需重写（更省心，但更慢）。点此切到手动·写完即停。", "Auto review: after writing it auto-audits and rewrites as needed (less effort, but slower). Click to switch to manual stop.", "Kiểm duyệt tự động: sau khi viết tự động kiểm tra và viết lại nếu cần (nhẹ nhàng hơn, nhưng chậm hơn). Nhấn để chuyển sang thủ công.")}
             className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-secondary/60 text-foreground rounded-xl border border-border/50 hover:bg-secondary transition-all"
           >
             {reviewMode === "manual" ? <Hand size={16} /> : <Settings2 size={16} />}
-            {reviewMode === "manual" ? "审查：手动·写完即停" : "审查：自动"}
+            {reviewMode === "manual" ? tr("审查：手动·写完即停", "Review: manual stop", "Kiểm duyệt: thủ công") : tr("审查：自动", "Review: auto", "Kiểm duyệt: tự động")}
           </button>
           <button
             onClick={() => setConfirmDeleteOpen(true)}
@@ -778,7 +767,7 @@ export function BookDetail({
                         onClick={() => handleSync(ch.number)}
                         disabled={syncingChapters.includes(ch.number) || ch.number !== latestPersistedChapter}
                         className="p-2 rounded-lg bg-secondary text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all shadow-sm disabled:opacity-50"
-                        title={data?.book.language === "en" ? "Sync truth/state from edited chapter" : "根据已编辑章节同步 truth/state"}
+                        title={data?.book.language === "en" ? "Sync truth/state from edited chapter" : tr("根据已编辑章节同步 truth/state", "Sync truth/state from edited chapter", "Đồng bộ truth/state từ chương đã chỉnh sửa")}
                       >
                         {syncingChapters.includes(ch.number)
                           ? <div className="w-3.5 h-3.5 border-2 border-muted-foreground/20 border-t-muted-foreground rounded-full animate-spin" />

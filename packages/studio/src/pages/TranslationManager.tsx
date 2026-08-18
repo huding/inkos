@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Theme } from "../hooks/use-theme";
 import type { TFunction } from "../hooks/use-i18n";
 import { useColors } from "../hooks/use-colors";
+import { tr, getAppLanguage } from "../lib/app-language";
 import { fetchJson, useApi } from "../hooks/use-api";
 import { Download, FileText, Languages, Loader2, Play, Upload } from "lucide-react";
 
@@ -121,10 +122,30 @@ const LANGUAGE_PRESETS_EN = [
   "Turkish",
 ] as const;
 
+const LANGUAGE_PRESETS_VI = [
+  "Tự động nhận diện",
+  "Tiếng Trung (Giản thể)",
+  "Tiếng Trung (Phồn thể)",
+  "Tiếng Anh",
+  "Tiếng Nhật",
+  "Tiếng Hàn",
+  "Tiếng Pháp",
+  "Tiếng Đức",
+  "Tiếng Tây Ban Nha",
+  "Tiếng Bồ Đào Nha",
+  "Tiếng Nga",
+  "Tiếng Ả Rập",
+  "Tiếng Indonesia",
+  "Tiếng Việt",
+  "Tiếng Thái",
+  "Tiếng Ý",
+  "Tiếng Thổ Nhĩ Kỳ",
+] as const;
+
 export function TranslationManager({ nav, theme, t }: { nav: Nav; theme: Theme; t: TFunction }) {
   const c = useColors(theme);
-  const isZh = t("nav.connected") === "已连接";
-  const languagePresets = isZh ? LANGUAGE_PRESETS_ZH : LANGUAGE_PRESETS_EN;
+  const appLang = getAppLanguage();
+  const languagePresets = appLang === "vi" ? LANGUAGE_PRESETS_VI : appLang === "en" ? LANGUAGE_PRESETS_EN : LANGUAGE_PRESETS_ZH;
   const { data, loading, error, refetch } = useApi<TranslationListResponse>("/translations");
   const [selectedId, setSelectedId] = useState("");
   const [detail, setDetail] = useState<TranslationDetailResponse | null>(null);
@@ -134,8 +155,8 @@ export function TranslationManager({ nav, theme, t }: { nav: Nav; theme: Theme; 
   const [file, setFile] = useState<File | null>(null);
   const [uploaded, setUploaded] = useState<TranslationUploadResponse | null>(null);
   const [title, setTitle] = useState("");
-  const [sourceLanguage, setSourceLanguage] = useState(isZh ? "自动识别" : "Auto detect");
-  const [targetLanguage, setTargetLanguage] = useState(isZh ? "中文（简体）" : "English");
+  const [sourceLanguage, setSourceLanguage] = useState(() => tr("自动识别", "Auto detect", "Tự động nhận diện"));
+  const [targetLanguage, setTargetLanguage] = useState(() => tr("中文（简体）", "Chinese (Simplified)", "Tiếng Trung (Giản thể)"));
   const [segmentMaxChars, setSegmentMaxChars] = useState(1200);
   const [previewChapterNumber, setPreviewChapterNumber] = useState<number | null>(null);
 
@@ -179,7 +200,7 @@ export function TranslationManager({ nav, theme, t }: { nav: Nav; theme: Theme; 
       });
       setUploaded(res);
       if (!title.trim()) setTitle(file.name.replace(/\.[^.]+$/u, ""));
-      setStatus(isZh ? `已上传：${res.storedPath}` : `Uploaded: ${res.storedPath}`);
+      setStatus(tr(`已上传：${res.storedPath}`, `Uploaded: ${res.storedPath}`, `Đã tải lên: ${res.storedPath}`));
     } catch (err) {
       setStatus(`Error: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
@@ -204,7 +225,7 @@ export function TranslationManager({ nav, theme, t }: { nav: Nav; theme: Theme; 
         }),
       });
       setSelectedId(res.projectId);
-      setStatus(isZh ? `已创建翻译项目：${res.title}` : `Created translation project: ${res.title}`);
+      setStatus(tr(`已创建翻译项目：${res.title}`, `Created translation project: ${res.title}`, `Đã tạo dự án dịch: ${res.title}`));
       await refetch();
     } catch (err) {
       setStatus(`Error: ${err instanceof Error ? err.message : String(err)}`);
@@ -223,9 +244,11 @@ export function TranslationManager({ nav, theme, t }: { nav: Nav; theme: Theme; 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ batchSize: 8 }),
       });
-      setStatus(isZh
-        ? `翻译 ${res.translatedSegments} 段，审校 ${res.reviewedChapters} 章。${res.skillIds?.length ? `Skill：${res.skillIds.join(" · ")}。` : ""}报告：${res.reportPath}`
-        : `Translated ${res.translatedSegments} segments, reviewed ${res.reviewedChapters} chapters. ${res.skillIds?.length ? `Skills: ${res.skillIds.join(" · ")}. ` : ""}Report: ${res.reportPath}`);
+      setStatus(tr(
+        `翻译 ${res.translatedSegments} 段，审校 ${res.reviewedChapters} 章。${res.skillIds?.length ? `Skill：${res.skillIds.join(" · ")}。` : ""}报告：${res.reportPath}`,
+        `Translated ${res.translatedSegments} segments, reviewed ${res.reviewedChapters} chapters. ${res.skillIds?.length ? `Skills: ${res.skillIds.join(" · ")}. ` : ""}Report: ${res.reportPath}`,
+        `Đã dịch ${res.translatedSegments} đoạn, đã xem ${res.reviewedChapters} chương. ${res.skillIds?.length ? `Skill: ${res.skillIds.join(" · ")}. ` : ""}Báo cáo: ${res.reportPath}`,
+      ));
       await refetch();
       const updated = await fetchJson<TranslationDetailResponse>(`/translations/${encodeURIComponent(selected.projectId)}`);
       setDetail(updated);
@@ -247,7 +270,7 @@ export function TranslationManager({ nav, theme, t }: { nav: Nav; theme: Theme; 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ format }),
       });
-      setStatus(isZh ? `已导出 ${format}: ${res.outputPath}` : `Exported ${format}: ${res.outputPath}`);
+      setStatus(tr(`已导出 ${format}: ${res.outputPath}`, `Exported ${format}: ${res.outputPath}`, `Đã xuất ${format}: ${res.outputPath}`));
     } catch (err) {
       setStatus(`Error: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
@@ -333,7 +356,7 @@ export function TranslationManager({ nav, theme, t }: { nav: Nav; theme: Theme; 
               {languagePresets.map((language) => <option key={`source-${language}`} value={language} />)}
             </datalist>
             <datalist id="translation-target-language-options">
-              {languagePresets.filter((language) => language !== (isZh ? "自动识别" : "Auto detect")).map((language) => (
+              {languagePresets.filter((language) => language !== tr("自动识别", "Auto detect", "Tự động nhận diện")).map((language) => (
                 <option key={`target-${language}`} value={language} />
               ))}
             </datalist>

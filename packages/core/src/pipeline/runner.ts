@@ -114,7 +114,9 @@ function formatImportedChapter(
   language: LengthLanguage,
   content = chapter.content,
 ): string {
-  return language === "en"
+  return language === "vi"
+    ? `Chương ${index + 1}: ${chapter.title}\n\n${content}`
+    : language === "en"
     ? `Chapter ${index + 1}: ${chapter.title}\n\n${content}`
     : `第${index + 1}章 ${chapter.title}\n\n${content}`;
 }
@@ -151,7 +153,9 @@ function buildTitleCatalog(
   language: LengthLanguage,
 ): string {
   return chapters.map((chapter, index) =>
-    language === "en"
+    language === "vi"
+      ? `- Chương ${index + 1}: ${chapter.title} (${chapter.content.length} ký tự)`
+      : language === "en"
       ? `- Chapter ${index + 1}: ${chapter.title} (${chapter.content.length} chars)`
       : `- 第${index + 1}章：${chapter.title}（${chapter.content.length}字）`,
   ).join("\n");
@@ -165,9 +169,17 @@ function buildTitleCatalog(
 export function buildSpinoffFoundationContext(
   parentCanon: string,
   direction: string | undefined,
-  language: "zh" | "en",
+  language: "zh" | "en" | "vi",
 ): string {
   const dir = direction?.trim();
+  if (language === "vi") {
+    return [
+      "## Đây là một NGOẠI TRUYỆN (番外)",
+      "Tái sử dụng nhân vật, thế giới và quy tắc đã được thiết lập từ chính truyện bên dưới. Kể một cốt truyện phụ ĐỘC LẬP — một cung bổ sung, tiền truyện nhân vật, hoặc what-if — KHÔNG đẩy tiến hay mâu thuẫn với cốt truyện chính của tác phẩm gốc.",
+      dir ? `\n## Hướng ngoại truyện\n${dir}` : "",
+      `\n## Chính truyện gốc (tái sử dụng nhân vật và bối cảnh này)\n${parentCanon}`,
+    ].filter(Boolean).join("\n");
+  }
   if (language === "en") {
     return [
       "## This is a SIDE-STORY (番外)",
@@ -198,7 +210,13 @@ export function buildImportFoundationSource(
   }
 
   const anchorIndexes = pickImportAnchorIndexes(chapters.length, edgeChapterCount, middleAnchorCount);
-  const header = language === "en"
+  const header = language === "vi"
+    ? [
+        "## Gói tài liệu nguồn nhập nền tảng",
+        "",
+        `Sách được nhập có ${chapters.length} chương. Gói này chọn các chương mở đầu, điểm kết/tiếp nối và các chương neo ở giữa. Các chương không được chọn sẽ được phát lại tuần tự sau khi tạo nền tảng để xây dựng lại truth files.`,
+      ].join("\n")
+    : language === "en"
     ? [
         "## Import foundation source package",
         "",
@@ -209,8 +227,8 @@ export function buildImportFoundationSource(
         "",
         `本次导入共 ${chapters.length} 章。这里选取完整的开篇章节、结尾续写点和中段锚点，并保留完整标题目录；未选章节将在后续顺序回放中逐章分析并沉淀 truth files。`,
       ].join("\n");
-  const catalogTitle = language === "en" ? "## Complete chapter title catalog" : "## 完整章节标题目录";
-  const anchorsTitle = language === "en" ? "## Complete source chapters selected for architecture" : "## 用于反推基础设定的完整锚点章节";
+  const catalogTitle = language === "vi" ? "## Danh mục tiêu đề chương đầy đủ" : language === "en" ? "## Complete chapter title catalog" : "## 完整章节标题目录";
+  const anchorsTitle = language === "vi" ? "## Các chương nguồn đầy đủ được chọn cho kiến trúc" : language === "en" ? "## Complete source chapters selected for architecture" : "## 用于反推基础设定的完整锚点章节";
   const anchorText = anchorIndexes
     .map((index) => {
       const chapter = chapters[index]!;
@@ -472,7 +490,7 @@ export class PipelineRunner {
   }
 
   private localize(language: LengthLanguage, messages: { zh: string; en: string }): string {
-    return language === "en" ? messages.en : messages.zh;
+    return language !== "zh" ? messages.en : messages.zh;
   }
 
   private async resolveBookLanguage(
@@ -541,7 +559,7 @@ export class PipelineRunner {
     readonly mode: "original" | "fanfic" | "series";
     readonly sourceCanon?: string;
     readonly styleGuide?: string;
-    readonly language: "zh" | "en";
+    readonly language: "zh" | "en" | "vi";
     readonly stageLanguage: LengthLanguage;
     readonly targetChapters?: number;
     readonly maxRetries?: number;
@@ -628,17 +646,27 @@ export class PipelineRunner {
       }>;
       readonly overallFeedback: string;
     },
-    language: "zh" | "en",
+    language: "zh" | "en" | "vi",
   ): string {
     const dimensionLines = review.dimensions
       .map((dimension) => (
-        language === "en"
+        language === "vi"
+          ? `- ${dimension.name} [${dimension.score}]: ${dimension.feedback}`
+          : language === "en"
           ? `- ${dimension.name} [${dimension.score}]: ${dimension.feedback}`
           : `- ${dimension.name}（${dimension.score}分）：${dimension.feedback}`
       ))
       .join("\n");
 
-    return language === "en"
+    return language === "vi"
+      ? [
+          "## Nhận xét tổng thể",
+          review.overallFeedback,
+          "",
+          "## Ghi chú từng hạng mục",
+          dimensionLines || "- không có",
+        ].join("\n")
+      : language === "en"
       ? [
           "## Overall Feedback",
           review.overallFeedback,
@@ -768,7 +796,7 @@ export class PipelineRunner {
     this.logStage(stageLanguage, { zh: "生成基础设定", en: "generating foundation" });
     const { profile: gp } = await this.loadGenreProfile(book.genre);
     const reviewer = new FoundationReviewerAgent(this.agentCtxFor("foundation-reviewer", book.id));
-    const resolvedLanguage = (book.language ?? gp.language) === "en" ? "en" as const : "zh" as const;
+    const resolvedLanguage = (book.language ?? gp.language) === "en" ? "en" as const : (book.language ?? gp.language) === "vi" ? "vi" as const : "zh" as const;
     const foundation = await this.generateAndReviewFoundation({
       generate: (reviewFeedback) => architect.generateFoundation(
         book,
@@ -898,7 +926,7 @@ export class PipelineRunner {
     });
 
     const reviewer = new FoundationReviewerAgent(this.agentCtxFor("foundation-reviewer", bookId));
-    const resolvedLanguage = (book.language ?? "zh") === "en" ? "en" as const : "zh" as const;
+    const resolvedLanguage = (book.language ?? "zh") === "en" ? "en" as const : (book.language ?? "zh") === "vi" ? "vi" as const : "zh" as const;
     try {
       const review = await reviewer.review({
         foundation,
@@ -1013,7 +1041,7 @@ export class PipelineRunner {
     const reviewer = new FoundationReviewerAgent(this.agentCtxFor("foundation-reviewer", book.id));
     this.logStage(stageLanguage, { zh: "生成同人基础设定", en: "generating fanfic foundation" });
     const { profile: gp } = await this.loadGenreProfile(book.genre);
-    const resolvedLanguage = (book.language ?? gp.language) === "en" ? "en" as const : "zh" as const;
+    const resolvedLanguage = (book.language ?? gp.language) === "en" ? "en" as const : (book.language ?? gp.language) === "vi" ? "vi" as const : "zh" as const;
     const foundation = await this.generateAndReviewFoundation({
       generate: (reviewFeedback) => architect.generateFanficFoundation(
         book,
@@ -1071,7 +1099,7 @@ export class PipelineRunner {
     const architect = new ArchitectAgent(this.agentCtxFor("architect", book.id));
     const reviewer = new FoundationReviewerAgent(this.agentCtxFor("foundation-reviewer", book.id));
     const { profile: gp } = await this.loadGenreProfile(book.genre);
-    const resolvedLanguage = (book.language ?? gp.language) === "en" ? "en" as const : "zh" as const;
+    const resolvedLanguage = (book.language ?? gp.language) === "en" ? "en" as const : (book.language ?? gp.language) === "vi" ? "vi" as const : "zh" as const;
     const spinoffContext = buildSpinoffFoundationContext(parentCanon, direction, resolvedLanguage);
 
     this.logStage(stageLanguage, { zh: "生成番外基础设定", en: "generating side-story foundation" });
@@ -1662,7 +1690,9 @@ export class PipelineRunner {
       }
       await archiveChapterVersion(bookDir, targetChapter, content, "revision");
       const reviseLang = book.language ?? gp.language;
-      const reviseHeading = reviseLang === "en"
+      const reviseHeading = reviseLang === "vi"
+        ? `# Chương ${targetChapter}: ${chapterMeta.title}`
+        : reviseLang === "en"
         ? `# Chapter ${targetChapter}: ${chapterMeta.title}`
         : `# 第${targetChapter}章 ${chapterMeta.title}`;
 
@@ -1681,7 +1711,9 @@ export class PipelineRunner {
       }
 
       // Update index
-      const downstreamRevisionNotice = language === "en"
+      const downstreamRevisionNotice = language === "vi"
+        ? `[warning] Chương ${targetChapter} đã thay đổi; hãy kiểm tra lại chương phía sau này để đảm bảo tính liên tục.`
+        : language === "en"
         ? `[warning] Chapter ${targetChapter} changed; re-review this downstream chapter for continuity.`
         : `[warning] 第${targetChapter}章已重写，请重新检查本章与前文的连续性。`;
       const updatedIndex = index.map((ch) => {
@@ -2072,9 +2104,11 @@ export class PipelineRunner {
       auditResult = {
         passed: false,
         issues: [],
-        summary: pipelineLang === "en"
+        summary: pipelineLang === "vi"
+          ? "Chưa được kiểm duyệt (chế độ thủ công: dừng sau khi viết — chạy kiểm duyệt khi sẵn sàng)."
+          : pipelineLang === "en"
           ? "Not reviewed yet (manual mode: stopped after writing — run review when ready)."
-          : "尚未审查（手动模式：写完即停，需要时点“审查”）。",
+          : "尚未审查（手动模式：写完即停，需要时点\u201c审查\u201d）。",
       };
     } else {
       const auditor = new ContinuityAuditor(this.agentCtxFor("auditor", bookId));
@@ -2184,7 +2218,9 @@ export class PipelineRunner {
       }
     }
     if (persistenceOutput.title !== output.title) {
-      const description = pipelineLang === "en"
+      const description = pipelineLang === "vi"
+        ? `Tiêu đề chương "${output.title}" đã được tự động điều chỉnh thành "${persistenceOutput.title}".`
+        : pipelineLang === "en"
         ? `Chapter title "${output.title}" was auto-adjusted to "${persistenceOutput.title}".`
         : `章节标题"${output.title}"已自动调整为"${persistenceOutput.title}"。`;
       this.config.logger?.warn(`[title] ${description}`);
@@ -2194,7 +2230,9 @@ export class PipelineRunner {
           severity: "warning",
           category: "title-dedup",
           description,
-          suggestion: pipelineLang === "en"
+          suggestion: pipelineLang === "vi"
+            ? "Nếu tiêu đề được đặt lại tự động không tốt, hãy sửa tiêu đề chương thủ công."
+            : pipelineLang === "en"
             ? "If the auto-renamed title is weak, revise the chapter title manually."
             : "如果自动改名不理想，可以在后续手动修订章节标题。",
         }],
@@ -2346,12 +2384,26 @@ export class PipelineRunner {
         : auditResult.passed ? "✅" : "⚠️";
       const chapterLength = formatLengthCount(finalWordCount, lengthSpec.countingMode);
       await dispatchNotification(this.config.notifyChannels, {
-        title: `${statusEmoji} ${book.title} 第${chapterNumber}章`,
+        title: pipelineLang === "vi"
+          ? `${statusEmoji} ${book.title} Chương ${chapterNumber}`
+          : pipelineLang === "en"
+          ? `${statusEmoji} ${book.title} Chapter ${chapterNumber}`
+          : `${statusEmoji} ${book.title} 第${chapterNumber}章`,
         body: [
           `**${persistenceOutput.title}** | ${chapterLength}`,
-          revised ? "📝 已自动修正" : "",
+          revised
+            ? pipelineLang === "vi" ? "📝 Đã tự động sửa" : pipelineLang === "en" ? "📝 Auto-revised" : "📝 已自动修正"
+            : "",
           resolvedStatus === "state-degraded"
-            ? "状态结算: 已降级保存，需先修复 state 再继续"
+            ? pipelineLang === "vi"
+              ? "Kết toán trạng thái: đã lưu ở mức giảm cấp, cần sửa state trước khi tiếp tục"
+              : pipelineLang === "en"
+              ? "State settlement: saved in degraded mode — fix state before continuing"
+              : "状态结算: 已降级保存，需先修复 state 再继续"
+            : pipelineLang === "vi"
+            ? `Kiểm duyệt: ${auditResult.passed ? "Đạt" : "Cần xem xét thủ công"}`
+            : pipelineLang === "en"
+            ? `Review: ${auditResult.passed ? "Passed" : "Needs manual review"}`
             : `审稿: ${auditResult.passed ? "通过" : "需人工审核"}`,
           ...auditResult.issues
             .filter((i) => i.severity !== "info")
@@ -2690,7 +2742,7 @@ export class PipelineRunner {
 
     const book = await this.state.loadBookConfig(bookId);
     const { profile: gp } = await this.loadGenreProfile(book.genre);
-    const lang = (book.language ?? gp.language) === "en" ? "en" as const : "zh" as const;
+    const lang = (book.language ?? gp.language) === "en" ? "en" as const : (book.language ?? gp.language) === "vi" ? "vi" as const : "zh" as const;
 
     // Statistical fingerprint (language-aware: words for en, characters for zh)
     const profile = analyzeStyle(sample, sourceName, lang);
@@ -2700,15 +2752,17 @@ export class PipelineRunner {
     if (sample.length < 500) {
       qualitativeGuide = this.buildDeterministicStyleGuide(profile, {
         language: lang,
-        reason: lang === "en"
+        reason: lang === "vi"
+          ? `Mẫu văn bản ngắn (${sample.length} ký tự), hướng dẫn này dùng dấu vân tay thống kê thay vì phân tích định tính bằng LLM.`
+          : lang === "en"
           ? `The sample is short (${sample.length} chars), so this guide uses the statistical fingerprint instead of LLM qualitative extraction.`
           : `样本文本较短（${sample.length}字），本次先使用统计指纹生成文风指南，不强行调用 LLM 做定性拆解。`,
       });
     } else {
       try {
         // LLM qualitative extraction (language-aware prompt)
-        const styleSystemPrompt = lang === "en"
-          ? `You are a literary style analyst. Analyze the writing style of the reference text and extract qualitative, imitable features.
+        const styleSystemPrompt = lang !== "zh"
+          ? `You are a literary style analyst. Analyze the writing style of the reference text and extract qualitative, imitable features.${lang === "vi" ? "\n\n【LANGUAGE OVERRIDE】ALL output MUST be written in Vietnamese." : ""}
 
 Output format (Markdown):
 ## Narrative Voice & Tone
@@ -2764,7 +2818,7 @@ Base the analysis on the text's actual features, not generalities. Support each 
 （任何值得模仿的个人写作习惯）
 
 分析必须基于原文实际特征，不要泛泛而谈。每个部分用1-2个原文例句佐证。`;
-        const styleUserPrompt = lang === "en"
+        const styleUserPrompt = lang !== "zh"
           ? `Analyze the writing style of the following reference text:\n\n${sample}`
           : `分析以下参考文本的写作风格：\n\n${sample}`;
         const response = await runWorkerAgent(this.config.client, this.config.model, appendActivatedSkillGuidance([
@@ -2805,8 +2859,29 @@ Base the analysis on the text's actual features, not generalities. Support each 
       readonly rhetoricalFeatures: ReadonlyArray<string>;
       readonly sourceName?: string;
     },
-    options: { readonly language: "zh" | "en"; readonly reason: string },
+    options: { readonly language: "zh" | "en" | "vi"; readonly reason: string },
   ): string {
+    if (options.language === "vi") {
+      return [
+        "# Hướng dẫn phong cách",
+        "",
+        `> ${options.reason}`,
+        "",
+        "## Dấu vân tay thống kê",
+        `- Nguồn: ${profile.sourceName ?? "unknown"}`,
+        `- Độ dài câu trung bình: ${profile.avgSentenceLength}`,
+        `- Độ lệch chuẩn độ dài câu: ${profile.sentenceLengthStdDev}`,
+        `- Độ dài đoạn văn trung bình: ${profile.avgParagraphLength}`,
+        `- Đa dạng từ vựng: ${Math.round(profile.vocabularyDiversity * 100)}%`,
+        profile.topPatterns.length > 0 ? `- Cấu trúc lặp lại: ${profile.topPatterns.join(", ")}` : "- Cấu trúc lặp lại: không rõ trong mẫu này",
+        profile.rhetoricalFeatures.length > 0 ? `- Đặc điểm tu từ: ${profile.rhetoricalFeatures.join(", ")}` : "- Đặc điểm tu từ: không rõ trong mẫu này",
+        "",
+        "## Cách sử dụng",
+        "- Coi đây là dấu vân tay phong cách nhẹ, không phải hướng dẫn mô phỏng đầy đủ.",
+        "- Giữ nhịp câu và đoạn văn gần với mẫu khi soạn thảo.",
+        "- Nếu hướng dẫn này quá mỏng, hãy nhập đoạn dài hơn sau; tệp sẽ được thay thế.",
+      ].join("\n");
+    }
     if (options.language === "en") {
       return [
         "# Style Guide",
@@ -2874,6 +2949,9 @@ Base the analysis on the text's actual features, not generalities. Support each 
     };
 
     const parentBook = await this.state.loadBookConfig(parentBookId);
+    const targetBook = await this.state.loadBookConfig(targetBookId);
+    const isNonZh = (targetBook.language ?? "zh") !== "zh";
+    const isViLang = (targetBook.language ?? "zh") === "vi";
 
     // Phase 5: parent book may be on the new prose layout; prefer outline/.
     const readParentOutline = async (newRel: string, legacyRel: string): Promise<string> => {
@@ -2897,7 +2975,54 @@ Base the analysis on the text's actual features, not generalities. Support each 
     const response = await runWorkerAgent(this.config.client, this.config.model, appendActivatedSkillGuidance([
       {
         role: "system",
-        content: `你是一位网络小说架构师。基于正传的全部设定和状态文件，生成一份完整的"正传正典参照"文档，供番外写作和审计使用。
+        content: isNonZh
+          ? `You are a web-fiction architect. Based on the parent book's full settings and state files, generate a complete "Parent Canon Reference" document for use during side-story writing and auditing.${isViLang ? "\n\n【LANGUAGE OVERRIDE】ALL output MUST be written in Vietnamese." : ""}
+
+Output format (Markdown):
+# Parent Canon (《{parent book title}》)
+
+## World Rules (complete, from parent settings)
+(Power system, geography, faction relationships, core rules — copy completely, do not compress)
+
+## Canon Constraints (facts that must not be violated)
+| ConstraintID | Type | Constraint | Severity |
+|---|---|---|---|
+| C01 | character-life | ... | critical |
+(List all hard constraints: who is alive, who is dead, what events have occurred, what rules cannot be violated)
+
+## Character Snapshots
+| Character | Current State | Core Personality | Dialogue Traits | Known Info | Unknown Info |
+|---|---|---|---|---|---|
+(Extract a complete snapshot for each important character from the state and character matrix)
+
+## Character Dual-State Principles
+- Characters who will grow stronger: write hints of potential
+- Characters who will turn dark: write subtle cracks
+- Characters who will die: write the personality trait that leads to their death
+
+## Key Event Timeline
+| Chapter | Event | Characters Involved | Constraints on Side-story |
+|---|---|---|---|
+(Extract key events from chapter summaries)
+
+## Hook Status
+| Hook ID | Type | Status | Content | Expected Payoff |
+|---|---|---|---|---|
+
+## Resource Ledger Snapshot
+(Current resource state)
+
+---
+meta:
+  parentBookId: "{parentBookId}"
+  parentTitle: "{parent book title}"
+  generatedAt: "{ISO timestamp}"
+
+Requirements:
+1. Copy world rules completely — accuracy is paramount, do not compress
+2. Canon constraints must be exhaustive — omissions cause side-story contradictions with the parent
+3. Character snapshots must include information boundaries (known/unknown) to prevent side-story characters referencing information they shouldn't know`
+          : `你是一位网络小说架构师。基于正传的全部设定和状态文件，生成一份完整的"正传正典参照"文档，供番外写作和审计使用。
 
 输出格式（Markdown）：
 # 正传正典（《{正传书名}》）
@@ -2946,32 +3071,9 @@ meta:
       },
       {
         role: "user",
-        content: `正传书名：${parentBook.title}
-正传ID：${parentBookId}
-
-## 正传世界设定
-${storyBible}
-
-## 正传当前状态卡
-${currentState}
-
-## 正传资源账本
-${ledger}
-
-## 正传伏笔池
-${hooks}
-
-## 正传章节摘要
-${summaries}
-
-## 正传支线进度
-${subplots}
-
-## 正传情感弧线
-${emotions}
-
-## 正传角色矩阵
-${matrix}`,
+        content: isNonZh
+          ? `Parent book title: ${parentBook.title}\nParent book ID: ${parentBookId}\n\n## Parent World Settings\n${storyBible}\n\n## Parent Current State\n${currentState}\n\n## Parent Resource Ledger\n${ledger}\n\n## Parent Pending Hooks\n${hooks}\n\n## Parent Chapter Summaries\n${summaries}\n\n## Parent Subplot Progress\n${subplots}\n\n## Parent Emotional Arcs\n${emotions}\n\n## Parent Character Matrix\n${matrix}`
+          : `正传书名：${parentBook.title}\n正传ID：${parentBookId}\n\n## 正传世界设定\n${storyBible}\n\n## 正传当前状态卡\n${currentState}\n\n## 正传资源账本\n${ledger}\n\n## 正传伏笔池\n${hooks}\n\n## 正传章节摘要\n${summaries}\n\n## 正传支线进度\n${subplots}\n\n## 正传情感弧线\n${emotions}\n\n## 正传角色矩阵\n${matrix}`,
       },
     ], this.currentActivatedSkills()), { temperature: 0.3, signal: this.currentAbortSignal() });
 
@@ -3058,7 +3160,7 @@ ${matrix}`,
               generate: (reviewFeedback) => architect.generateFoundationFromImport(book, foundationSource, undefined, reviewFeedback, { importMode: "series" }),
               reviewer: new FoundationReviewerAgent(this.agentCtxFor("foundation-reviewer", input.bookId)),
               mode: "series",
-              language: resolvedLanguage === "en" ? "en" : "zh",
+              language: resolvedLanguage,
               stageLanguage: resolvedLanguage,
               targetChapters: book.targetChapters,
             })
@@ -3338,6 +3440,22 @@ ${matrix}`,
   }
 
   private buildImportReplayStateSeed(language: LengthLanguage): string {
+    if (language === "vi") {
+      return [
+        "# Trạng thái hiện tại",
+        "",
+        "| Trường | Giá trị |",
+        "| --- | --- |",
+        "| Chương hiện tại | 0 |",
+        "| Vị trí hiện tại | (chưa đặt) |",
+        "| Trạng thái nhân vật chính | (chưa đặt) |",
+        "| Mục tiêu hiện tại | (chưa đặt) |",
+        "| Hạn chế hiện tại | (chưa đặt) |",
+        "| Liên minh hiện tại | (chưa đặt) |",
+        "| Xung đột hiện tại | (chưa đặt) |",
+        "",
+      ].join("\n");
+    }
     if (language === "en") {
       return [
         "# Current State",
@@ -3372,6 +3490,15 @@ ${matrix}`,
   }
 
   private buildImportReplayHooksSeed(language: LengthLanguage): string {
+    if (language === "vi") {
+      return [
+        "# Danh sách hook chờ",
+        "",
+        "| hook_id | start_chapter | type | status | last_advanced_chapter | expected_payoff | notes |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
+        "",
+      ].join("\n");
+    }
     if (language === "en") {
       return [
         "# Pending Hooks",

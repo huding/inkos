@@ -37,7 +37,7 @@ export class StateValidatorAgent extends BaseAgent {
     newState: string,
     oldHooks: string,
     newHooks: string,
-    language: "zh" | "en" = "zh",
+    language: "zh" | "en" | "vi" = "zh",
     authorityContext?: StateValidationAuthorityContext,
   ): Promise<ValidationResult> {
     const stateDiff = this.computeDiff(oldState, newState, "State Card");
@@ -48,7 +48,7 @@ export class StateValidatorAgent extends BaseAgent {
       return { warnings: [], passed: true, repairRequired: false };
     }
 
-    const langInstruction = language === "en"
+    const langInstruction = language !== "zh"
       ? "Respond in English."
       : "用中文回答。";
 

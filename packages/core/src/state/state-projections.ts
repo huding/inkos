@@ -14,10 +14,10 @@ import {
 
 export function renderHooksProjection(
   state: HooksState,
-  language: "zh" | "en" = "zh",
+  language: "zh" | "en" | "vi" = "zh",
   options?: { readonly currentChapter?: number },
 ): string {
-  const title = language === "en" ? "# Pending Hooks" : "# 伏笔池";
+  const title = language === "zh" ? "# 伏笔池" : language === "vi" ? "# Danh sách hook chờ" : "# Pending Hooks";
   // Phase 7 + hotfixes 1 & 2: depends_on / pays_off_in_arc / core_hook / half_life / promoted
   // are visible columns, so writer and reviewer both see the causal chain, planned payoff arc,
   // stale threshold, and promotion flag. stale / blocked diagnostic flags are appended to the
@@ -71,12 +71,12 @@ export function renderHooksProjection(
   return [title, "", ...headers, ...rows, ""].join("\n");
 }
 
-function renderDependsOnCell(ids: ReadonlyArray<string>, language: "zh" | "en"): string {
-  if (ids.length === 0) return language === "en" ? "none" : "无";
+function renderDependsOnCell(ids: ReadonlyArray<string>, language: "zh" | "en" | "vi"): string {
+  if (ids.length === 0) return language === "zh" ? "无" : language === "vi" ? "không có" : "none";
   return `[${ids.join(", ")}]`;
 }
 
-function renderCoreHookCell(isCore: boolean, language: "zh" | "en"): string {
+function renderCoreHookCell(isCore: boolean, language: "zh" | "en" | "vi"): string {
   if (language === "en") return isCore ? "true" : "false";
   return isCore ? "是" : "否";
 }
@@ -86,7 +86,7 @@ function renderHalfLifeCell(value: number | undefined): string {
   return String(Math.trunc(value));
 }
 
-function renderPromotedCell(value: boolean | undefined, language: "zh" | "en"): string {
+function renderPromotedCell(value: boolean | undefined, language: "zh" | "en" | "vi"): string {
   if (value === undefined) return "";
   if (language === "en") return value ? "true" : "false";
   return value ? "是" : "否";
@@ -94,9 +94,9 @@ function renderPromotedCell(value: boolean | undefined, language: "zh" | "en"): 
 
 export function renderChapterSummariesProjection(
   state: ChapterSummariesState,
-  language: "zh" | "en" = "zh",
+  language: "zh" | "en" | "vi" = "zh",
 ): string {
-  const title = language === "en" ? "# Chapter Summaries" : "# 章节摘要";
+  const title = language === "zh" ? "# 章节摘要" : language === "vi" ? "# Tóm tắt các chương" : "# Chapter Summaries";
   const headers = language === "en"
     ? [
       "| Chapter | Title | Characters | Key Events | State Changes | Hook Activity | Mood | Chapter Type |",
@@ -127,7 +127,7 @@ export function renderChapterSummariesProjection(
 
 export function renderCurrentStateProjection(
   state: CurrentStateState,
-  language: "zh" | "en" = "zh",
+  language: "zh" | "en" | "vi" = "zh",
 ): string {
   const layout = language === "en"
     ? {

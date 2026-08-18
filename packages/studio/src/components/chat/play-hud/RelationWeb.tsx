@@ -34,15 +34,16 @@ function truncate(s: string, n = 6): string {
 export function RelationWeb(props: {
   readonly centerLabel: string;
   readonly relations: ReadonlyArray<HoldingRelation>;
-  readonly isZh: boolean;
+  readonly lang: "zh" | "en" | "vi";
 }) {
   const W = 300;
   const H = 150;
   const cx = W / 2;
   const cy = H / 2;
   const { nodes, overflow } = layoutRelations(props.relations, W, H);
+  const ariaLabel = props.lang === "zh" ? "关系网" : props.lang === "vi" ? "Mạng quan hệ" : "Relations";
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="block w-full min-w-0" role="img" aria-label={props.isZh ? "关系网" : "Relations"}>
+    <svg viewBox={`0 0 ${W} ${H}`} className="block w-full min-w-0" role="img" aria-label={ariaLabel}>
       {nodes.map((n, i) => (
         <line key={`l${i}`} x1={cx} y1={cy} x2={n.x} y2={n.y} className="stroke-border" strokeWidth={1.5} />
       ))}

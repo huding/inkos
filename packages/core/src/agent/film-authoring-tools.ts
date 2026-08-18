@@ -227,13 +227,14 @@ const FillNodeParams = Type.Object({
   instruction: Type.String({ description: "what this scene should contain (beats, who speaks, choices)" }),
 });
 
-export type FilmAuthoringLanguage = "zh" | "en";
+export type FilmAuthoringLanguage = "zh" | "en" | "vi";
 
 const NODE_SYSTEM_ZH = `你是互动影游编剧。根据当前图上下文和指令，写出指定节点的完整场景、对白、选项和配图方向。choices[].targetNodeId 必须指向已存在的节点 id。完成后调用 submit_story_node。`;
 const NODE_SYSTEM_EN = `You are an interactive film scriptwriter. Using the current graph context and the instruction, write the requested node's complete scene, dialogue, choices, and image direction. Every choices[].targetNodeId must point to an existing node id. Finish by calling submit_story_node.`;
+const NODE_SYSTEM_VI = `Bạn là biên kịch phim tương tác. Dựa trên ngữ cảnh đồ thị hiện tại và chỉ dẫn, hãy viết đầy đủ cảnh, lời thoại, lựa chọn và hướng minh hoạ cho node được chỉ định. Mỗi choices[].targetNodeId phải trỏ đến một node id đã tồn tại. Hoàn thành bằng cách gọi submit_story_node.`;
 
 function nodeSystemPrompt(language: FilmAuthoringLanguage): string {
-  return language === "en" ? NODE_SYSTEM_EN : NODE_SYSTEM_ZH;
+  return language === "vi" ? NODE_SYSTEM_VI : language === "en" ? NODE_SYSTEM_EN : NODE_SYSTEM_ZH;
 }
 
 function graphUpdatedDetails(rev: number, promptId: string, extra: Record<string, unknown> = {}) {
@@ -263,7 +264,9 @@ export function createFillNodeTool(
         promptId: "interactive-film.script",
         projectRoot,
       });
-      const userPrompt = language === "en"
+      const userPrompt = language === "vi"
+        ? `${context}\n\nNode id cần điền: ${params.nodeId}\nChỉ dẫn: ${params.instruction}`
+        : language === "en"
         ? `${context}\n\nNode id to fill: ${params.nodeId}\nInstruction: ${params.instruction}`
         : `${context}\n\n要填的节点 id：${params.nodeId}\n指令：${params.instruction}`;
       const node = await deps.submitNode(systemPrompt, userPrompt, params.nodeId, signal);
@@ -299,7 +302,9 @@ export function createReviseNodeTool(
         promptId: "interactive-film.script",
         projectRoot,
       });
-      const userPrompt = language === "en"
+      const userPrompt = language === "vi"
+        ? `${context}\n\nNode id cần sửa: ${params.nodeId}\nNội dung hiện tại: ${JSON.stringify(current ?? {})}\nChỉ dẫn sửa đổi: ${params.instruction}`
+        : language === "en"
         ? `${context}\n\nNode id to revise: ${params.nodeId}\nCurrent content: ${JSON.stringify(current ?? {})}\nRevision instruction: ${params.instruction}`
         : `${context}\n\n要修改的节点 id：${params.nodeId}\n现有内容：${JSON.stringify(current ?? {})}\n修改指令：${params.instruction}`;
       const node = await deps.submitNode(systemPrompt, userPrompt, params.nodeId, signal);
@@ -338,6 +343,7 @@ const DraftStructureParams = Type.Object({
 
 const STRUCT_SYSTEM_ZH = `你是互动影游编剧。根据上下文与指令设计分支骨架。恰好 1 个 type=start，至少 2 个 branch，至少 2 个差异化 ending 节点；每条路径都能到某个 ending。完成后调用 submit_story_structure。`;
 const STRUCT_SYSTEM_EN = `You are an interactive film scriptwriter. Using the context and the instruction, design the branching skeleton. Include exactly 1 node with type=start, at least 2 branch nodes, and at least 2 clearly differentiated ending nodes; every path must reach an ending. Finish by calling submit_story_structure.`;
+const STRUCT_SYSTEM_VI = `Bạn là biên kịch phim tương tác. Dựa trên ngữ cảnh và chỉ dẫn, thiết kế bộ khung nhánh. Bao gồm đúng 1 node type=start, ít nhất 2 node branch, và ít nhất 2 node ending khác biệt rõ ràng; mọi đường dẫn đều phải tới một ending. Hoàn thành bằng cách gọi submit_story_structure.`;
 
 export function createDraftStructureTool(
   projectRoot: string,
@@ -353,11 +359,13 @@ export function createDraftStructureTool(
     async execute(_id, params: Static<typeof DraftStructureParams>, signal) {
       const graph = await loadStoryGraph(projectRoot, projectId);
       const context = graph ? buildFilmAuthoringContext(graph) : "(empty graph)";
-      const systemPrompt = await appendPromptPackGuidance(language === "en" ? STRUCT_SYSTEM_EN : STRUCT_SYSTEM_ZH, {
+      const systemPrompt = await appendPromptPackGuidance(language === "vi" ? STRUCT_SYSTEM_VI : language === "en" ? STRUCT_SYSTEM_EN : STRUCT_SYSTEM_ZH, {
         promptId: "interactive-film.story-graph",
         projectRoot,
       });
-      const userPrompt = language === "en"
+      const userPrompt = language === "vi"
+        ? `${context}\n\nChỉ dẫn bộ khung: ${params.instruction}`
+        : language === "en"
         ? `${context}\n\nSkeleton instruction: ${params.instruction}`
         : `${context}\n\n骨架指令：${params.instruction}`;
       const nodes = await deps.submitStructure(systemPrompt, userPrompt, signal);

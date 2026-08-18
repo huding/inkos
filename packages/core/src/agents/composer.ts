@@ -55,7 +55,7 @@ export interface ContextBudget {
 export interface CompressibleContextCompileRequest {
   readonly chapterNumber: number;
   readonly goal: string;
-  readonly language: "zh" | "en";
+  readonly language: "zh" | "en" | "vi";
   readonly maxInputTokens: number;
   readonly protectedEntries: ContextPackage["selectedContext"];
   readonly compressibleEntries: ContextPackage["selectedContext"];
@@ -69,7 +69,7 @@ export interface OutlineSectionSelectionRequest {
   readonly chapterNumber: number;
   readonly goal: string;
   readonly outlineNode: string;
-  readonly language: "zh" | "en";
+  readonly language: "zh" | "en" | "vi";
   readonly candidates: ReadonlyArray<{
     readonly source: string;
     readonly heading: string;
@@ -160,7 +160,7 @@ async function applyContextBudgetIfNeeded(params: {
   readonly contextPackage: ContextPackage;
   readonly chapterNumber: number;
   readonly goal: string;
-  readonly language: "zh" | "en";
+  readonly language: "zh" | "en" | "vi";
   readonly contextBudget?: ContextBudget;
   readonly compiler?: CompressibleContextCompiler;
   readonly onContextCompression?: ContextCompressionCallback;
@@ -394,13 +394,13 @@ export class ComposerAgent extends BaseAgent {
     if (request.candidates.length <= 1) {
       return request.candidates.map((candidate) => candidate.source);
     }
-    const isEn = request.language === "en";
+    const isNonCjk = request.language !== "zh";
     const candidates = request.candidates.map((candidate, index) => [
       `#${index + 1} ${candidate.source}`,
       `heading: ${candidate.heading}`,
       candidate.excerpt,
     ].join("\n")).join("\n\n");
-    const system = isEn
+    const system = isNonCjk
       ? [
           "You are InkOS's semantic outline-section selector.",
           "Select only the outline sections needed for the current chapter. Prefer semantic relevance over keyword overlap.",
@@ -411,7 +411,7 @@ export class ComposerAgent extends BaseAgent {
           "只选择当前章节真正需要的大纲段落。按语义相关性判断，不要按关键词重合机械选择。",
           "只返回严格 JSON：{\"selectedSources\":[\"...\"]}。必须使用候选里的精确 source id；不确定时选最安全的相关锚点，不要编造 id。",
         ].join("\n");
-    const user = isEn
+    const user = isNonCjk
       ? [
           `File: ${request.fileName}`,
           `Chapter: ${request.chapterNumber}`,
@@ -442,7 +442,7 @@ export class ComposerAgent extends BaseAgent {
   }
 
   async selectReferenceSections(request: ReferenceSectionSelectionRequest): Promise<ReadonlyArray<string>> {
-    const isEn = request.language === "en";
+    const isNonCjk = request.language !== "zh";
     const candidates = request.candidates.map((candidate, index) => [
       `#${index + 1} ${candidate.source}`,
       `title: ${candidate.title}`,
@@ -450,7 +450,7 @@ export class ComposerAgent extends BaseAgent {
       `user-defined uses: ${candidate.uses.join("; ")}`,
       candidate.note ? `user note: ${candidate.note}` : undefined,
     ].filter(Boolean).join("\n")).join("\n\n");
-    const system = isEn
+    const system = isNonCjk
       ? [
           "You are InkOS's semantic reference-section selector.",
           "The user explicitly bound these reference assets to this book and described how each may be used.",
@@ -463,7 +463,7 @@ export class ComposerAgent extends BaseAgent {
           "只选择当前章节任务真正需要的段落。参考资料只是创作借鉴，不能成为正典，也不能压过作者意图和既成事实。",
           "只返回严格 JSON：{\"selectedSources\":[\"...\"]}。必须使用候选中的精确 source id；没有相关段落时可以返回空数组。",
         ].join("\n");
-    const user = isEn
+    const user = isNonCjk
       ? [
           `Chapter: ${request.chapterNumber}`,
           `Goal: ${request.goal}`,
@@ -494,10 +494,10 @@ export class ComposerAgent extends BaseAgent {
   }
 
   async compileCompressibleContext(request: CompressibleContextCompileRequest): Promise<string> {
-    const isEn = request.language === "en";
+    const isNonCjk = request.language !== "zh";
     const protectedBlock = renderContextEntries(request.protectedEntries);
     const compressibleBlock = renderContextEntries(request.compressibleEntries);
-    const system = isEn
+    const system = isNonCjk
       ? [
           "You are InkOS's semantic context compiler.",
           "Only compile the COMPRESSIBLE CONTEXT. The PROTECTED CONTEXT is binding reference material and must not be rewritten, summarized as a substitute, or weakened.",
@@ -508,7 +508,7 @@ export class ComposerAgent extends BaseAgent {
           "只能编译【可压缩上下文】。【受保护上下文】是绑定参照，不得改写、不得替代总结、不得削弱。",
           "输出简洁 Markdown，保留来源指针。保留会影响下一章的人名、未兑现承诺、证据、时间点和约束，丢弃低相关噪声。",
         ].join("\n");
-    const user = isEn
+    const user = isNonCjk
       ? [
           `Chapter: ${request.chapterNumber}`,
           `Goal: ${request.goal}`,
@@ -572,7 +572,7 @@ export function contextBudgetFromClient(client: LLMClient): ContextBudget | unde
 async function collectSelectedContext(
   storyDir: string,
   plan: PlanChapterOutput,
-  language: "zh" | "en",
+  language: "zh" | "en" | "vi",
   outlineSectionSelector?: OutlineSectionSelector,
   memorySemanticSelector?: MemorySemanticSelector,
 ): Promise<{
@@ -822,7 +822,7 @@ async function buildHookDebtEntries(
       readonly payoffTiming?: string;
       readonly notes: string;
     }>,
-  language: "zh" | "en",
+  language: "zh" | "en" | "vi",
 ): Promise<ContextPackage["selectedContext"]> {
     const targetHookIds = [...new Set(plan.memo.threadRefs)];
     if (targetHookIds.length === 0) {
@@ -841,8 +841,8 @@ async function buildHookDebtEntries(
 
       const seedSummary = findHookSummary(summaries, hook.hookId, hook.startChapter, "seed");
       const latestSummary = findHookSummary(summaries, hook.hookId, hook.lastAdvancedChapter, "latest");
-      const role = language === "en" ? "memo-referenced debt" : "备忘引用旧债";
-      const promise = hook.expectedPayoff || (language === "en" ? "(unspecified)" : "（未写明）");
+      const role = language !== "zh" ? "memo-referenced debt" : "备忘引用旧债";
+      const promise = hook.expectedPayoff || (language !== "zh" ? "(unspecified)" : "（未写明）");
       const seedBeat = seedSummary
         ? renderHookDebtBeat(seedSummary)
         : (hook.notes || promise);
@@ -853,10 +853,10 @@ async function buildHookDebtEntries(
 
       return [{
         source: `runtime/hook_debt#${hook.hookId}`,
-        reason: language === "en"
+        reason: language !== "zh"
           ? "Narrative debt brief with original seed text for this hook agenda target."
           : "含原始种子文本的叙事债务简报。",
-        excerpt: language === "en"
+        excerpt: language !== "zh"
           ? [
               `${hook.hookId} (${hook.type}, ${role}, open ${age} chapters)`,
               `reader promise: ${promise}`,
@@ -911,7 +911,7 @@ async function maybeOutlineSectionSources(
   reason: string,
   plan: PlanChapterOutput,
   kind: "story-frame" | "volume-map",
-  language: "zh" | "en",
+  language: "zh" | "en" | "vi",
   outlineSectionSelector?: OutlineSectionSelector,
 ): Promise<ContextPackage["selectedContext"]> {
     const path = join(storyDir, fileName);
@@ -950,7 +950,7 @@ async function selectOutlineSectionEntries(params: {
   readonly reason: string;
   readonly plan: PlanChapterOutput;
   readonly kind: "story-frame" | "volume-map";
-  readonly language: "zh" | "en";
+  readonly language: "zh" | "en" | "vi";
   readonly outlineSectionSelector?: OutlineSectionSelector;
 }): Promise<ContextPackage["selectedContext"]> {
     const sections = splitMarkdownSections(params.content);

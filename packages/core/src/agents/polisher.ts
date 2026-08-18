@@ -5,7 +5,7 @@ export interface PolishChapterInput {
   readonly chapterContent: string;
   readonly chapterNumber: number;
   readonly chapterMemo?: ChapterMemo;
-  readonly language?: "zh" | "en";
+  readonly language?: "zh" | "en" | "vi";
   readonly temperature?: number;
 }
 
@@ -36,7 +36,8 @@ export class PolisherAgent extends BaseAgent {
 
   async polishChapter(input: PolishChapterInput): Promise<PolishChapterOutput> {
     const language = input.language ?? "zh";
-    const isEnglish = language === "en";
+    const isVietnamese = language === "vi";
+    const isEnglish = language !== "zh";
 
     const memoBlock = input.chapterMemo
       ? isEnglish
@@ -44,11 +45,15 @@ export class PolisherAgent extends BaseAgent {
         : `\n\n## 章节备忘（润色不得偏离此目标）\ngoal：${input.chapterMemo.goal}\n\n${input.chapterMemo.body}`
       : "";
 
-    const systemPrompt = isEnglish
+    const systemPrompt = isVietnamese
+      ? buildVietnameseSystemPrompt()
+      : isEnglish
       ? buildEnglishSystemPrompt()
       : buildChineseSystemPrompt();
 
-    const userPrompt = isEnglish
+    const userPrompt = isVietnamese
+      ? `Hãy trau chuốt chương ${input.chapterNumber}. Chỉ trả về toàn bộ nội dung chương đã được trau chuốt, không có JSON, không có tiêu đề, không có chú thích.${memoBlock}\n\n## Chương Cần Trau Chuốt\n${input.chapterContent}`
+      : isEnglish
       ? `Polish chapter ${input.chapterNumber}. Return the polished chapter in full, nothing else — no JSON, no headers, no commentary.${memoBlock}\n\n## Chapter Under Polish\n${input.chapterContent}`
       : `请润色第${input.chapterNumber}章。只返回完整的润色后正文，不要 JSON、不要标题、不要解释。${memoBlock}\n\n## 待润色章节\n${input.chapterContent}`;
 
@@ -150,4 +155,36 @@ Structure is the Reviewer's job. Do not invent beats to patch a weak chapter.
 Return the polished chapter in full — no JSON, no section headers, no commentary or progress notes. If you find plot/structure issues the reviewer must handle, append "[polisher-note] ..." lines at the very end, one per line. Omit the block if there are no notes.
 
 Preserve the vast majority of sentences. Only rewrite those that truly need it — do not rewrite whole paragraphs. Total length change must stay within ±15% of the original.`;
+}
+
+function buildVietnameseSystemPrompt(): string {
+  return `【LANGUAGE OVERRIDE】ALL output MUST be in Vietnamese (Tiếng Việt).
+
+Bạn là biên tập viên trau chuốt văn xuôi chuyên nghiệp cho tiểu thuyết mạng tiếng Việt.
+
+## Phạm Vi Trau Chuốt (ràng buộc cứng)
+
+Bạn chỉ chỉnh sửa lớp văn xuôi — cách đặt câu / đoạn văn / bố cục / dùng từ / giác quan / độ tự nhiên của đối thoại. Bạn KHÔNG ĐƯỢC thêm/xóa tình tiết, thay đổi tính cách nhân vật, điều chỉnh cốt truyện chính. Nếu phát hiện vấn đề tình tiết/cấu trúc, chỉ ghi chú "[polisher-note] ..." ở cuối chương để reviewer xem xét — không được chỉnh sửa nội dung.
+
+## 6 Lỗi Văn Xuôi Cần Loại Bỏ
+
+- Miêu tả vô nghĩa: mô tả môi trường dài dòng, đối thoại lạc đề. Nén lại thành "một nét chấm phá".
+- Văn hoa thái quá: dùng tính từ chỉ để khoe chữ, cảm xúc giả tạo. Để ngôn ngữ phục vụ cảm xúc.
+- Văn xuôi yếu: nghĩa mơ hồ, chỉ từ không rõ, nhảy logic, ngôn ngữ tẻ nhạt. Viết lại thành câu rõ ràng, có hình ảnh.
+- Định dạng kém: đoạn văn quá dài, bố cục không nhất quán, đối thoại không xuống dòng. Chuẩn hóa thân thiện với đọc trên điện thoại.
+- Dấu vết AI: quá nhiều từ chuyển tiếp, câu rào đón, lối viết như báo cáo. Thay bằng ngôn ngữ tự nhiên hoặc hành động cụ thể.
+- Phản ứng đám đông: không viết "mọi người đều giật mình" — chọn 1-2 nhân vật và viết phản ứng cụ thể.
+
+## Quy Tắc Cứng Cho Lớp Văn Xuôi
+
+- Đoạn văn: 3-5 dòng/đoạn (đọc trên điện thoại); đoạn trên 7 dòng phải tách, nhưng không tách vụn nhịp hành động+phản ứng.
+- Đa dạng câu: cấm 3+ câu liên tiếp cùng cấu trúc/chủ ngữ; xen kẽ dài-ngắn.
+- Động từ > tính từ: danh từ+động từ tạo hình ảnh; tối đa 1-2 tính từ chính xác/câu.
+- Năm giác quan: mỗi cảnh ít nhất 1-2 chi tiết giác quan (nhìn/nghe/ngửi/chạm/nếm), không xếp chồng cơ học.
+- Tự nhiên đối thoại: mỗi nhân vật có giọng riêng; đối thoại phù hợp danh tính, cảm xúc, thông tin hiện tại của nhân vật.
+- Ngoại hiện cảm xúc: thay "anh ấy cảm thấy tức giận" bằng "anh siết chặt tay, khớp xương trắng bệch".
+
+Trả về toàn bộ chương đã trau chuốt — không JSON, không tiêu đề, không chú thích. Nếu phát hiện vấn đề cấu trúc, ghi "[polisher-note] ..." ở cuối chương, mỗi ghi chú một dòng.
+
+Giữ nguyên phần lớn câu văn. Chỉ viết lại những câu thực sự cần — không viết lại cả đoạn. Tổng thay đổi độ dài phải trong ±15% bản gốc.`;
 }

@@ -2,7 +2,7 @@ import type { ContextPackage } from "../models/input-governance.js";
 
 export function buildGovernedMemoryEvidenceBlocks(
   contextPackage: ContextPackage,
-  language?: "zh" | "en",
+  language?: "zh" | "en" | "vi",
 ): {
   readonly hookDebtBlock?: string;
   readonly hooksBlock?: string;
@@ -63,13 +63,13 @@ export function buildGovernedMemoryEvidenceBlocks(
       : undefined,
     titleHistoryBlock: titleHistoryEntries.length > 0
       ? renderEvidenceBlock(
-          resolvedLanguage === "en" ? "Recent Title History" : "近期标题历史",
+          resolvedLanguage === "zh" ? "近期标题历史" : resolvedLanguage === "vi" ? "Lịch sử tiêu đề gần đây" : "Recent Title History",
           titleHistoryEntries,
         )
       : undefined,
     moodTrailBlock: moodTrailEntries.length > 0
       ? renderEvidenceBlock(
-          resolvedLanguage === "en" ? "Recent Mood / Chapter Type Trail" : "近期情绪/章节类型轨迹",
+          resolvedLanguage === "zh" ? "近期情绪/章节类型轨迹" : resolvedLanguage === "vi" ? "Cung tâm trạng / Kiểu chương gần đây" : "Recent Mood / Chapter Type Trail",
           moodTrailEntries,
         )
       : undefined,

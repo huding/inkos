@@ -12,7 +12,9 @@ _tmp_*
 test-project/
 .venv*/
 .gstack/
+.claude/
 .worktrees/
+logs/
 docs/*
 novel-to-comic-research.docx
 .pnpm-store/

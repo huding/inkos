@@ -148,14 +148,18 @@ import {
 
 // -- Studio server language (read per request from the project config's `language`) --
 
-type StudioLanguage = "zh" | "en";
+type StudioLanguage = "zh" | "en" | "vi";
 
 function normalizeStudioLanguage(value: unknown): StudioLanguage {
-  return value === "en" ? "en" : "zh";
+  if (value === "en") return "en";
+  if (value === "vi") return "vi";
+  return "zh";
 }
 
-function pick(lang: StudioLanguage, zh: string, en: string): string {
-  return lang === "en" ? en : zh;
+function pick(lang: StudioLanguage, zh: string, en: string, vi?: string): string {
+  if (lang === "en") return en;
+  if (lang === "vi") return vi ?? en;
+  return zh;
 }
 
 // -- Pipeline stage definitions per agent type --
@@ -163,36 +167,37 @@ function pick(lang: StudioLanguage, zh: string, en: string): string {
 interface BilingualLabel {
   readonly zh: string;
   readonly en: string;
+  readonly vi?: string;
 }
 
 const PIPELINE_STAGES: Record<string, ReadonlyArray<BilingualLabel>> = {
   writer: [
-    { zh: "准备章节输入", en: "Prepare chapter input" },
-    { zh: "撰写章节草稿", en: "Write chapter draft" },
-    { zh: "落盘最终章节", en: "Save final chapter" },
-    { zh: "生成最终真相文件", en: "Generate final truth files" },
-    { zh: "校验真相文件变更", en: "Validate truth file changes" },
-    { zh: "同步记忆索引", en: "Sync memory index" },
-    { zh: "更新章节索引与快照", en: "Update chapter index and snapshot" },
+    { zh: "准备章节输入", en: "Prepare chapter input", vi: "Chuẩn bị đầu vào chương" },
+    { zh: "撰写章节草稿", en: "Write chapter draft", vi: "Viết bản nháp chương" },
+    { zh: "落盘最终章节", en: "Save final chapter", vi: "Lưu chương cuối" },
+    { zh: "生成最终真相文件", en: "Generate final truth files", vi: "Tạo tệp truth cuối" },
+    { zh: "校验真相文件变更", en: "Validate truth file changes", vi: "Kiểm tra thay đổi truth" },
+    { zh: "同步记忆索引", en: "Sync memory index", vi: "Đồng bộ chỉ mục ký ức" },
+    { zh: "更新章节索引与快照", en: "Update chapter index and snapshot", vi: "Cập nhật chỉ mục và snapshot chương" },
   ],
   architect: [
-    { zh: "生成基础设定", en: "Generate foundation" },
-    { zh: "保存书籍配置", en: "Save book config" },
-    { zh: "写入基础设定文件", en: "Write foundation files" },
-    { zh: "初始化控制文档", en: "Initialize control documents" },
-    { zh: "创建初始快照", en: "Create initial snapshot" },
+    { zh: "生成基础设定", en: "Generate foundation", vi: "Tạo nền tảng" },
+    { zh: "保存书籍配置", en: "Save book config", vi: "Lưu cấu hình sách" },
+    { zh: "写入基础设定文件", en: "Write foundation files", vi: "Ghi tệp nền tảng" },
+    { zh: "初始化控制文档", en: "Initialize control documents", vi: "Khởi tạo tài liệu điều khiển" },
+    { zh: "创建初始快照", en: "Create initial snapshot", vi: "Tạo snapshot ban đầu" },
   ],
   reviser: [
-    { zh: "加载修订上下文", en: "Load revision context" },
-    { zh: "修订章节", en: "Revise chapter" },
-    { zh: "落盘修订结果", en: "Save revision result" },
-    { zh: "更新索引与快照", en: "Update index and snapshot" },
+    { zh: "加载修订上下文", en: "Load revision context", vi: "Tải ngữ cảnh sửa đổi" },
+    { zh: "修订章节", en: "Revise chapter", vi: "Sửa đổi chương" },
+    { zh: "落盘修订结果", en: "Save revision result", vi: "Lưu kết quả sửa đổi" },
+    { zh: "更新索引与快照", en: "Update index and snapshot", vi: "Cập nhật chỉ mục và snapshot" },
   ],
-  auditor: [{ zh: "审计章节", en: "Audit chapter" }],
+  auditor: [{ zh: "审计章节", en: "Audit chapter", vi: "Kiểm toán chương" }],
 };
 
 function pipelineStages(agent: string, lang: StudioLanguage = "zh"): string[] | undefined {
-  return PIPELINE_STAGES[agent]?.map((stage) => pick(lang, stage.zh, stage.en));
+  return PIPELINE_STAGES[agent]?.map((stage) => pick(lang, stage.zh, stage.en, stage.vi));
 }
 
 function attachmentDisposition(fileName: string): string {
@@ -201,44 +206,44 @@ function attachmentDisposition(fileName: string): string {
 }
 
 const AGENT_LABELS: Record<string, BilingualLabel> = {
-  architect: { zh: "建书", en: "Book setup" },
-  writer: { zh: "写作", en: "Writing" },
-  auditor: { zh: "审计", en: "Audit" },
-  reviser: { zh: "修订", en: "Revision" },
-  exporter: { zh: "导出", en: "Export" },
+  architect: { zh: "建书", en: "Book setup", vi: "Tạo sách" },
+  writer: { zh: "写作", en: "Writing", vi: "Viết" },
+  auditor: { zh: "审计", en: "Audit", vi: "Kiểm toán" },
+  reviser: { zh: "修订", en: "Revision", vi: "Sửa đổi" },
+  exporter: { zh: "导出", en: "Export", vi: "Xuất" },
 };
 const TOOL_LABELS: Record<string, BilingualLabel> = {
-  read: { zh: "读取文件", en: "Read file" },
-  edit: { zh: "编辑文件", en: "Edit file" },
-  grep: { zh: "搜索", en: "Search" },
-  ls: { zh: "列目录", en: "List directory" },
-  propose_action: { zh: "确认动作", en: "Confirm action" },
-  short_fiction_run: { zh: "短篇生产", en: "Short fiction" },
-  script_create: { zh: "剧本创作", en: "Script creation" },
-  storyboard_create: { zh: "分镜创作", en: "Storyboard creation" },
-  interactive_film_create: { zh: "互动影游", en: "Interactive film" },
-  translation_create: { zh: "翻译项目", en: "Translation" },
-  fanfic_create: { zh: "同人创作", en: "Fanfiction" },
-  continuation_import: { zh: "导入续写", en: "Continuation import" },
-  spinoff_create: { zh: "番外创作", en: "Side story" },
-  imitation_create: { zh: "仿写创作", en: "Style imitation" },
-  generate_cover: { zh: "生成封面", en: "Cover generation" },
-  play_edit: { zh: "编辑互动世界", en: "Edit interactive world" },
-  play_start: { zh: "启动互动世界", en: "Start interactive world" },
-  play_revise: { zh: "重做互动回合", en: "Redo interactive turn" },
-  play_step: { zh: "推进互动世界", en: "Advance interactive world" },
-  create_narrative_forecast: { zh: "剧情多线推演", en: "Narrative forecast" },
-  get_narrative_forecast: { zh: "核验剧情推演", en: "Recheck forecast" },
-  select_narrative_branch: { zh: "采用候选分支", en: "Select candidate branch" },
+  read: { zh: "读取文件", en: "Read file", vi: "Đọc tệp" },
+  edit: { zh: "编辑文件", en: "Edit file", vi: "Chỉnh sửa tệp" },
+  grep: { zh: "搜索", en: "Search", vi: "Tìm kiếm" },
+  ls: { zh: "列目录", en: "List directory", vi: "Liệt kê thư mục" },
+  propose_action: { zh: "确认动作", en: "Confirm action", vi: "Xác nhận hành động" },
+  short_fiction_run: { zh: "短篇生产", en: "Short fiction", vi: "Truyện ngắn" },
+  script_create: { zh: "剧本创作", en: "Script creation", vi: "Tạo kịch bản" },
+  storyboard_create: { zh: "分镜创作", en: "Storyboard creation", vi: "Tạo storyboard" },
+  interactive_film_create: { zh: "互动影游", en: "Interactive film", vi: "Phim tương tác" },
+  translation_create: { zh: "翻译项目", en: "Translation", vi: "Dịch thuật" },
+  fanfic_create: { zh: "同人创作", en: "Fanfiction", vi: "Fanfiction" },
+  continuation_import: { zh: "导入续写", en: "Continuation import", vi: "Nhập tiếp nối" },
+  spinoff_create: { zh: "番外创作", en: "Side story", vi: "Ngoại truyện" },
+  imitation_create: { zh: "仿写创作", en: "Style imitation", vi: "Mô phỏng phong cách" },
+  generate_cover: { zh: "生成封面", en: "Cover generation", vi: "Tạo bìa" },
+  play_edit: { zh: "编辑互动世界", en: "Edit interactive world", vi: "Chỉnh sửa thế giới tương tác" },
+  play_start: { zh: "启动互动世界", en: "Start interactive world", vi: "Khởi động thế giới tương tác" },
+  play_revise: { zh: "重做互动回合", en: "Redo interactive turn", vi: "Làm lại lượt tương tác" },
+  play_step: { zh: "推进互动世界", en: "Advance interactive world", vi: "Tiến tiếp thế giới tương tác" },
+  create_narrative_forecast: { zh: "剧情多线推演", en: "Narrative forecast", vi: "Dự báo cốt truyện" },
+  get_narrative_forecast: { zh: "核验剧情推演", en: "Recheck forecast", vi: "Kiểm tra dự báo" },
+  select_narrative_branch: { zh: "采用候选分支", en: "Select candidate branch", vi: "Chọn nhánh ứng viên" },
 };
 
 function resolveToolLabel(tool: string, agent?: string, lang: StudioLanguage = "zh"): string {
   if (tool === "sub_agent" && agent) {
     const label = AGENT_LABELS[agent];
-    return label ? pick(lang, label.zh, label.en) : agent;
+    return label ? pick(lang, label.zh, label.en, label.vi) : agent;
   }
   const label = TOOL_LABELS[tool];
-  return label ? pick(lang, label.zh, label.en) : tool;
+  return label ? pick(lang, label.zh, label.en, label.vi) : tool;
 }
 
 function formatTaskElapsed(ms: number, lang: StudioLanguage): string {
@@ -2862,7 +2867,7 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
         intent: "create_book",
         title: body.title,
         genre: body.genre,
-        language: body.language === "en" ? "en" : body.language === "zh" ? "zh" : undefined,
+        language: body.language === "en" ? "en" : body.language === "zh" ? "zh" : body.language === "vi" ? "vi" : undefined,
         platform: body.platform,
         chapterWordCount: body.chapterWordCount,
         targetChapters: body.targetChapters,
@@ -3003,7 +3008,7 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
         state.loadBookConfig(id),
         buildPipelineConfig({ bookIdForSettings: id }),
       ]);
-      const language = book.language === "en" ? "en" : "zh";
+      const language = book.language === "en" ? "en" : book.language === "vi" ? "vi" : "zh";
       const requestedBrief = typeof body.brief === "string" ? body.brief.trim() : "";
       const response = await runWorkerAgent(
         pipelineConfig.client,
@@ -3028,13 +3033,13 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
           {
             role: "user",
             content: [
-              language === "en" ? `Book: ${book.title}` : `书名：${book.title}`,
-              language === "en" ? `Chapter: ${num}` : `章节：第${num}章`,
+              language === "en" ? `Book: ${book.title}` : language === "vi" ? `Sách: ${book.title}` : `书名：${book.title}`,
+              language === "en" ? `Chapter: ${num}` : language === "vi" ? `Chương: ${num}` : `章节：第${num}章`,
               requestedBrief || persistedBrief
-                ? `${language === "en" ? "Current user brief" : "当前用户提示"}:\n${requestedBrief || persistedBrief}`
+                ? `${language === "en" ? "Current user brief" : language === "vi" ? "Yêu cầu người dùng" : "当前用户提示"}:\n${requestedBrief || persistedBrief}`
                 : "",
-              plan ? `${language === "en" ? "Generated chapter plan" : "系统章节计划"}:\n${plan}` : "",
-              `${language === "en" ? "Current chapter" : "当前章节"}:\n${chapter}`,
+              plan ? `${language === "en" ? "Generated chapter plan" : language === "vi" ? "Kế hoạch chương" : "系统章节计划"}:\n${plan}` : "",
+              `${language === "en" ? "Current chapter" : language === "vi" ? "Chương hiện tại" : "当前章节"}:\n${chapter}`,
             ].filter(Boolean).join("\n\n"),
           },
         ],
@@ -4136,7 +4141,7 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
       if (updates.stream !== undefined) {
         existing.llm.stream = updates.stream;
       }
-      if (updates.language === "zh" || updates.language === "en") {
+      if (updates.language === "zh" || updates.language === "en" || updates.language === "vi") {
         existing.language = updates.language;
       }
       const { writeFile: writeFileFs } = await import("node:fs/promises");
@@ -4683,8 +4688,8 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
           throw new ApiError(404, "BOOK_NOT_FOUND", `Book not found: ${agentBookId}`);
         }
       }
-      const configLanguage = config.language === "en" ? "en" : "zh";
-      const bookLanguage = activeBookConfig?.language === "en" ? "en" : activeBookConfig?.language === "zh" ? "zh" : undefined;
+      const configLanguage = config.language === "en" ? "en" : config.language === "vi" ? "vi" : "zh";
+      const bookLanguage = activeBookConfig?.language === "en" ? "en" : activeBookConfig?.language === "vi" ? "vi" : activeBookConfig?.language === "zh" ? "zh" : undefined;
       const requestedLanguage = actionPayload?.shortRun?.language ?? actionPayload?.createBook?.language;
       const surfaceLanguage = agentBookId
         ? (bookLanguage ?? configLanguage)
@@ -5302,7 +5307,7 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
   // --- Language setup ---
 
   app.post("/api/v1/project/language", async (c) => {
-    const { language } = await c.req.json<{ language: "zh" | "en" }>();
+    const { language } = await c.req.json<{ language: "zh" | "en" | "vi" }>();
     const configPath = join(root, "inkos.json");
     try {
       const raw = await readFile(configPath, "utf-8");
@@ -5730,7 +5735,7 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
         ...(updates.chapterWordCount !== undefined ? { chapterWordCount: Number(updates.chapterWordCount) } : {}),
         ...(updates.targetChapters !== undefined ? { targetChapters: Number(updates.targetChapters) } : {}),
         ...(updates.status !== undefined ? { status: updates.status as typeof book.status } : {}),
-        ...(updates.language !== undefined ? { language: updates.language as "zh" | "en" } : {}),
+        ...(updates.language !== undefined ? { language: updates.language as "zh" | "en" | "vi" } : {}),
         updatedAt: new Date().toISOString(),
       };
       await state.saveBookConfig(id, updated);
@@ -6066,7 +6071,7 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
       targetChapters: body.targetChapters ?? 100,
       chapterWordCount: body.chapterWordCount ?? 3000,
       fanficMode: (body.mode ?? "canon") as "canon",
-      ...(body.language ? { language: body.language as "zh" | "en" } : {}),
+      ...(body.language ? { language: body.language as "zh" | "en" | "vi" } : {}),
       createdAt: now,
       updatedAt: now,
     };
@@ -6133,7 +6138,7 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
     } catch {
       return c.json({ error: `Parent book "${body.parentBookId}" not found` }, 404);
     }
-    const language = (body.language ?? parent.language) as "zh" | "en" | undefined;
+    const language = (body.language ?? parent.language) as "zh" | "en" | "vi" | undefined;
     const now = new Date().toISOString();
     const bookConfig = buildStudioBookConfig({
       title: body.title,
@@ -6188,7 +6193,7 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
       platform: body.platform,
       targetChapters: body.targetChapters,
       chapterWordCount: body.chapterWordCount,
-      ...(body.language ? { language: body.language as "zh" | "en" } : {}),
+      ...(body.language ? { language: body.language as "zh" | "en" | "vi" } : {}),
     }, now);
     const bookId = bookConfig.id;
     if (!bookId) {

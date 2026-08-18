@@ -18,7 +18,7 @@ export interface PostWriteViolation {
 
 export function normalizePostWriteSurface(
   content: string,
-  languageOverride?: "zh" | "en",
+  languageOverride?: "zh" | "en" | "vi",
 ): string {
   let normalized = stripPostWriteMetaLines(content);
   if (languageOverride !== "en") {
@@ -82,13 +82,13 @@ export function validatePostWrite(
   content: string,
   genreProfile: GenreProfile,
   bookRules: BookRules | null,
-  languageOverride?: "zh" | "en",
+  languageOverride?: "zh" | "en" | "vi",
 ): ReadonlyArray<PostWriteViolation> {
   const violations: PostWriteViolation[] = [];
 
   // Skip Chinese-specific rules for English content
-  const isEnglish = (languageOverride ?? genreProfile.language) === "en";
-  if (isEnglish) {
+  const isNonCjk = (languageOverride ?? genreProfile.language) !== "zh";
+  if (isNonCjk) {
     // For English, only run book-specific prohibitions and paragraph length check
     return validatePostWriteEnglish(content, genreProfile, bookRules);
   }
@@ -191,12 +191,12 @@ export function validatePostWrite(
   if (chapterRefs && chapterRefs.length > 0) {
     const unique = [...new Set(chapterRefs)];
     violations.push({
-      rule: isEnglish ? "chapter-number-reference" : "章节号指称",
+      rule: isNonCjk ? "chapter-number-reference" : "章节号指称",
       severity: "error",
-      description: isEnglish
+      description: isNonCjk
         ? `Chapter text contains explicit chapter number references: ${unique.map(r => `"${r}"`).join(", ")}. Characters do not know they are in a numbered chapter.`
         : `正文中出现了章节号指称：${unique.map(r => `"${r}"`).join("、")}。角色不知道自己在第几章。`,
-      suggestion: isEnglish
+      suggestion: isNonCjk
         ? "Replace with natural references: 'that night', 'when the warehouse burned', 'the incident at the dock'"
         : '改成自然表达："那天晚上"、"仓库出事那次"、"码头上的事"',
     });
@@ -354,14 +354,14 @@ function detectFirstPersonInnerStateSlip(content: string): string | null {
 export function detectCrossChapterRepetition(
   currentContent: string,
   recentChaptersContent: string,
-  language: "zh" | "en" = "zh",
+  language: "zh" | "en" | "vi" = "zh",
 ): ReadonlyArray<PostWriteViolation> {
   if (!recentChaptersContent || recentChaptersContent.length < 100) return [];
 
   const violations: PostWriteViolation[] = [];
-  const isEnglish = language === "en";
+  const isNonCjk = language !== "zh";
 
-  if (isEnglish) {
+  if (isNonCjk) {
     // Extract 3-word phrases from current chapter
     const words = currentContent.toLowerCase().replace(/[^\w\s']/g, "").split(/\s+/).filter(w => w.length > 2);
     const phraseCounts = new Map<string, number>();
@@ -418,7 +418,7 @@ export function detectCrossChapterRepetition(
 export function detectParagraphLengthDrift(
   currentContent: string,
   recentChaptersContent: string,
-  language: "zh" | "en" = "zh",
+  language: "zh" | "en" | "vi" = "zh",
 ): ReadonlyArray<PostWriteViolation> {
   if (!recentChaptersContent || recentChaptersContent.trim().length === 0) return [];
 
@@ -438,7 +438,7 @@ export function detectParagraphLengthDrift(
   const dropPercent = Math.round((1 - shrinkRatio) * 100);
 
   return [
-    language === "en"
+    language !== "zh"
       ? {
           rule: "Paragraph density drift",
           severity: "warning",
@@ -543,14 +543,14 @@ function validatePostWriteEnglish(
 function appendParagraphShapeWarnings(
   violations: PostWriteViolation[],
   content: string,
-  language: "zh" | "en",
+  language: "zh" | "en" | "vi",
 ): void {
   const shape = analyzeParagraphShape(content, language);
   if (shape.paragraphs.length < 4) return;
 
   if (shape.shortParagraphs.length >= 4 && shape.shortRatio >= 0.6) {
     violations.push(
-      language === "en"
+      language !== "zh"
         ? {
             rule: "Paragraph fragmentation",
             severity: "warning",
@@ -568,7 +568,7 @@ function appendParagraphShapeWarnings(
 
   if (shape.maxConsecutiveShort >= 3) {
     violations.push(
-      language === "en"
+      language !== "zh"
         ? {
             rule: "Consecutive short paragraphs",
             severity: "warning",
@@ -587,7 +587,7 @@ function appendParagraphShapeWarnings(
 
 export function detectParagraphShapeWarnings(
   content: string,
-  language: "zh" | "en" = "zh",
+  language: "zh" | "en" | "vi" = "zh",
 ): ReadonlyArray<PostWriteViolation> {
   const violations: PostWriteViolation[] = [];
   appendParagraphShapeWarnings(violations, content, language);
@@ -599,11 +599,11 @@ function isDialogueParagraph(paragraph: string): boolean {
   return /^[""「『'《]/.test(trimmed) || /^[""]/.test(trimmed) || /^——/.test(trimmed);
 }
 
-function analyzeParagraphShape(content: string, language: "zh" | "en"): ParagraphShape {
+function analyzeParagraphShape(content: string, language: "zh" | "en" | "vi"): ParagraphShape {
   const paragraphs = extractParagraphs(content);
   // Exclude dialogue lines from short paragraph counting — dialogue is naturally short
   const narrativeParagraphs = paragraphs.filter((p) => !isDialogueParagraph(p));
-  const shortThreshold = language === "en" ? 120 : 35;
+  const shortThreshold = language !== "zh" ? 120 : 35;
   const shortParagraphs = narrativeParagraphs.filter((paragraph) => paragraph.length < shortThreshold);
   const averageLength = paragraphs.length > 0
     ? paragraphs.reduce((sum, paragraph) => sum + paragraph.length, 0) / paragraphs.length
@@ -714,7 +714,7 @@ export function detectDuplicateTitle(
 export function resolveDuplicateTitle(
   newTitle: string,
   existingTitles: ReadonlyArray<string>,
-  language: "zh" | "en" = "zh",
+  language: "zh" | "en" | "vi" = "zh",
   options?: {
     readonly content?: string;
   },
@@ -736,7 +736,7 @@ export function resolveDuplicateTitle(
 
     let counter = 2;
     while (counter < 100) {
-      const candidate = language === "en"
+      const candidate = language !== "zh"
         ? `${trimmed} (${counter})`
         : `${trimmed}（${counter}）`;
       if (detectDuplicateTitle(candidate, existingTitles).length === 0) {
@@ -768,7 +768,7 @@ export function resolveDuplicateTitle(
 function detectTitleCollapse(
   newTitle: string,
   existingTitles: ReadonlyArray<string>,
-  language: "zh" | "en",
+  language: "zh" | "en" | "vi",
 ): ReadonlyArray<PostWriteViolation> {
   const recentTitles = existingTitles
     .map((title) => title.trim())
@@ -796,7 +796,7 @@ function detectTitleCollapse(
   }
 
   return [
-    language === "en"
+    language !== "zh"
       ? {
           rule: "title-collapse",
           severity: "warning",
@@ -815,21 +815,21 @@ function detectTitleCollapse(
 function regenerateDuplicateTitle(
   baseTitle: string,
   existingTitles: ReadonlyArray<string>,
-  language: "zh" | "en",
+  language: "zh" | "en" | "vi",
   content?: string,
 ): string | undefined {
   if (!content || !content.trim()) {
     return undefined;
   }
 
-  const qualifier = language === "en"
+  const qualifier = language !== "zh"
     ? extractEnglishTitleQualifier(baseTitle, existingTitles, content)
     : extractChineseTitleQualifier(baseTitle, existingTitles, content);
   if (!qualifier) {
     return undefined;
   }
 
-  return language === "en"
+  return language !== "zh"
     ? `${baseTitle}: ${qualifier}`
     : `${baseTitle}：${qualifier}`;
 }
@@ -837,14 +837,14 @@ function regenerateDuplicateTitle(
 function regenerateCollapsedTitle(
   baseTitle: string,
   existingTitles: ReadonlyArray<string>,
-  language: "zh" | "en",
+  language: "zh" | "en" | "vi",
   content?: string,
 ): string | undefined {
   if (!content || !content.trim()) {
     return undefined;
   }
 
-  const fresh = language === "en"
+  const fresh = language !== "zh"
     ? extractEnglishTitleQualifier(baseTitle, existingTitles, content)
     : extractChineseTitleQualifier(baseTitle, existingTitles, content);
   if (!fresh) {

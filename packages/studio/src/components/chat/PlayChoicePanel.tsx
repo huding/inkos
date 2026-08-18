@@ -1,13 +1,16 @@
 export function PlayChoicePanel(props: {
   readonly choices: ReadonlyArray<string>;
   readonly disabled: boolean;
-  readonly isZh: boolean;
+  readonly lang: "zh" | "en" | "vi";
   readonly onChoose: (action: string) => void;
 }) {
+  const lc = (zh: string, en: string, vi?: string) => props.lang === "zh" ? zh : props.lang === "vi" ? (vi ?? en) : en;
   if (props.choices.length === 0) {
     return (
       <div className="px-4 py-3 text-center text-xs text-muted-foreground/60">
-        {props.disabled ? (props.isZh ? "推进中…" : "Advancing…") : (props.isZh ? "等待场景给出选项…" : "Waiting for choices…")}
+        {props.disabled
+          ? lc("推进中…", "Advancing…", "Đang tiến…")
+          : lc("等待场景给出选项…", "Waiting for choices…", "Đang chờ lựa chọn từ cảnh…")}
       </div>
     );
   }

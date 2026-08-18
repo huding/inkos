@@ -113,7 +113,7 @@ defer:
 // ---------------------------------------------------------------------------
 // English variants — Phase hotfix 4
 // Same 7-section structure, same placeholders, same sparse-memo legality.
-// Used when book.language === "en" so English-language books no longer
+// Used when book.language !== "zh" so English-language books no longer
 // receive a Chinese system prompt + Chinese user template.
 // ---------------------------------------------------------------------------
 
@@ -263,12 +263,12 @@ Produce the memo for chapter {{chapterNumber}}. Strictly emit the plain Markdown
  * Defaults to zh for backward compatibility — explicit "en" required for
  * the English variant.
  */
-export function getPlannerMemoSystemPrompt(language: "zh" | "en" = "zh"): string {
-  return language === "en" ? PLANNER_MEMO_SYSTEM_PROMPT_EN : PLANNER_MEMO_SYSTEM_PROMPT;
+export function getPlannerMemoSystemPrompt(language: "zh" | "en" | "vi" = "zh"): string {
+  return language !== "zh" ? PLANNER_MEMO_SYSTEM_PROMPT_EN : PLANNER_MEMO_SYSTEM_PROMPT;
 }
 
-export function getPlannerMemoUserTemplate(language: "zh" | "en" = "zh"): string {
-  return language === "en" ? PLANNER_MEMO_USER_TEMPLATE_EN : PLANNER_MEMO_USER_TEMPLATE;
+export function getPlannerMemoUserTemplate(language: "zh" | "en" | "vi" = "zh"): string {
+  return language !== "zh" ? PLANNER_MEMO_USER_TEMPLATE_EN : PLANNER_MEMO_USER_TEMPLATE;
 }
 
 export const PLANNER_MEMO_USER_TEMPLATE = `# 第 {{chapterNumber}} 章 memo 请求
@@ -330,14 +330,14 @@ export interface PlannerUserMessageInput {
   };
   readonly brief?: string;
   readonly chapterContext?: string;
-  readonly language?: "zh" | "en";
+  readonly language?: "zh" | "en" | "vi";
 }
 
 export function buildPlannerUserMessage(input: PlannerUserMessageInput): string {
   const language = input.language ?? "zh";
   const template = getPlannerMemoUserTemplate(language);
-  const yesText = language === "en" ? "yes" : "是";
-  const noText = language === "en" ? "no" : "否";
+  const yesText = language === "zh" ? "是" : language === "vi" ? "có" : "yes";
+  const noText = language === "zh" ? "否" : language === "vi" ? "không" : "no";
 
   const briefBlock = buildBriefBlock(input.brief ?? "", language);
   const chapterContextBlock = buildChapterContextBlock(input.chapterContext ?? "", language);
@@ -374,10 +374,10 @@ export function buildPlannerUserMessage(input: PlannerUserMessageInput): string 
  *
  * Returns "" when no brief exists (legacy books without brief.md).
  */
-function buildBriefBlock(brief: string, language: "zh" | "en"): string {
+function buildBriefBlock(brief: string, language: "zh" | "en" | "vi"): string {
   const trimmed = brief.trim();
   if (!trimmed) return "";
-  if (language === "en") {
+  if (language !== "zh") {
     return `## Creative brief (user's original intent — authoritative)
 ${trimmed}
 
@@ -389,10 +389,10 @@ ${trimmed}
 brief 是用户的直接指令。本章规划时，必须优先兑现 brief 里写明的核心设定（主角设定、世界前提、开场机制、样本章回钩子等）。如果 brief 里指定了内容比例、双主线权重或某条关系线必须占比，本章 memo 要把它拆成可见场面，而不是只在总结里提一句。**不要把 brief 里的核心设定推迟到后面的章节**——该在前几章落地的必须落地。`;
 }
 
-function buildChapterContextBlock(chapterContext: string, language: "zh" | "en"): string {
+function buildChapterContextBlock(chapterContext: string, language: "zh" | "en" | "vi"): string {
   const trimmed = chapterContext.trim();
   if (!trimmed) return "";
-  if (language === "en") {
+  if (language !== "zh") {
     return `## Per-chapter user instruction (highest priority for this chapter)
 ${trimmed}
 
@@ -412,11 +412,11 @@ ${trimmed}
 
 export function buildGoldenOpeningGuidance(
   chapterNumber: number,
-  language: "zh" | "en" = "zh",
+  language: "zh" | "en" | "vi" = "zh",
 ): string {
   if (chapterNumber > 3) return "";
 
-  if (language === "en") {
+  if (language !== "zh") {
     return `## Golden Opening Guidance — Chapter ${chapterNumber}
 
 This is chapter ${chapterNumber} of the opening three — the chapters that decide whether a reader stays. The Golden Three Chapters rule assigns each chapter a load-bearing slot: chapter 1 must throw the reader straight into the core conflict (the protagonist enters already facing the main contradiction — chase, dead-end, dispossession, transmigration-as-crisis), not a paragraph of background, family tree, weather, or dynastic preamble. Chapter 2 must put the protagonist's edge — the system, the power, the rebirth-memory, the information advantage — on the stage through one concrete event (not "he awakened a power" narrated, but "he used it for X and Y happened"). Chapter 3 must lock in a concrete short-term goal achievable within the next 3-10 chapters (build the first stake of capital, take down the small antagonist, save someone), giving the story forward pull.

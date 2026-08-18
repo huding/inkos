@@ -26,7 +26,7 @@ export interface ForecastContextSections {
 export interface ForecastContext {
   readonly bookId: string;
   readonly bookTitle: string;
-  readonly language: "zh" | "en";
+  readonly language: "zh" | "en" | "vi";
   readonly baseChapter: number;
   readonly contextFingerprint: string;
   readonly sections: ForecastContextSections;
@@ -173,23 +173,26 @@ async function readIfExists(path: string): Promise<string | null> {
 }
 
 export function renderForecastContextMarkdown(context: ForecastContext): string {
-  const zh = context.language === "zh";
+  const language = context.language;
+  const zh = language === "zh";
   const sectionList: ReadonlyArray<readonly [string, string]> = [
-    [zh ? "作者意图" : "Author intent", context.sections.authorIntent],
-    [zh ? "当前聚焦" : "Current focus", context.sections.currentFocus],
-    [zh ? "当前状态" : "Current state", context.sections.currentState],
-    [zh ? "伏笔与钩子" : "Pending hooks", context.sections.pendingHooks],
-    [zh ? "故事框架" : "Story frame", context.sections.storyFrame],
-    [zh ? "卷映射" : "Volume map", context.sections.volumeMap],
-    [zh ? "近期章节摘要" : "Recent chapter summaries", context.sections.recentChapterSummaries],
-    [zh ? "人物与关系" : "Characters and relationships", context.sections.characterContext],
-    [zh ? "支线看板" : "Subplot board", context.sections.subplotBoard],
+    [zh ? "作者意图" : language === "vi" ? "Ý định tác giả" : "Author intent", context.sections.authorIntent],
+    [zh ? "当前聚焦" : language === "vi" ? "Trọng tâm hiện tại" : "Current focus", context.sections.currentFocus],
+    [zh ? "当前状态" : language === "vi" ? "Trạng thái hiện tại" : "Current state", context.sections.currentState],
+    [zh ? "伏笔与钩子" : language === "vi" ? "Cốt truyện ngầm và hook" : "Pending hooks", context.sections.pendingHooks],
+    [zh ? "故事框架" : language === "vi" ? "Khung câu chuyện" : "Story frame", context.sections.storyFrame],
+    [zh ? "卷映射" : language === "vi" ? "Bản đồ tập" : "Volume map", context.sections.volumeMap],
+    [zh ? "近期章节摘要" : language === "vi" ? "Tóm tắt chương gần đây" : "Recent chapter summaries", context.sections.recentChapterSummaries],
+    [zh ? "人物与关系" : language === "vi" ? "Nhân vật và quan hệ" : "Characters and relationships", context.sections.characterContext],
+    [zh ? "支线看板" : language === "vi" ? "Bảng tuyến phụ" : "Subplot board", context.sections.subplotBoard],
   ];
 
   const blocks = [
     zh
       ? `# 正史上下文（《${context.bookTitle}》，已完成至第 ${context.baseChapter} 章）`
-      : `# Canonical context ("${context.bookTitle}", written through chapter ${context.baseChapter})`,
+      : language === "vi"
+        ? `# Ngữ cảnh chính sử ("${context.bookTitle}", đã viết đến chương ${context.baseChapter})`
+        : `# Canonical context ("${context.bookTitle}", written through chapter ${context.baseChapter})`,
     ...sectionList
       .filter(([, content]) => content.trim())
       .map(([heading, content]) => `## ${heading}\n\n${content.trim()}`),
@@ -197,13 +200,13 @@ export function renderForecastContextMarkdown(context: ForecastContext): string 
   return blocks.join("\n\n");
 }
 
-async function readBookConfig(bookDir: string): Promise<{ readonly title: string; readonly language: "zh" | "en" }> {
+async function readBookConfig(bookDir: string): Promise<{ readonly title: string; readonly language: "zh" | "en" | "vi" }> {
   try {
     const raw = await readFile(join(bookDir, "book.json"), "utf-8");
     const parsed = JSON.parse(raw) as { title?: unknown; language?: unknown };
     return {
       title: typeof parsed.title === "string" ? parsed.title : "",
-      language: parsed.language === "en" ? "en" : "zh",
+      language: parsed.language === "en" ? "en" : parsed.language === "vi" ? "vi" : "zh",
     };
   } catch {
     return { title: "", language: "zh" };

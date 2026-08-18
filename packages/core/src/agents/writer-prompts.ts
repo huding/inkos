@@ -4,6 +4,7 @@ import type { BookRules } from "../models/book-rules.js";
 import type { LengthSpec } from "../models/length-governance.js";
 import { buildFanficCanonSection, buildCharacterVoiceProfiles, buildFanficModeInstructions } from "./fanfic-prompt-sections.js";
 import { buildEnglishGenreIntro } from "./en-prompt-sections.js";
+import { buildVietnameseGenreIntro, buildVietnameseOutputLanguageReminder } from "./vi-prompt-sections.js";
 import { buildLengthSpec } from "../utils/length-metrics.js";
 
 export interface FanficContext {
@@ -27,15 +28,21 @@ export function buildWriterSystemPrompt(
   chapterNumber?: number,
   mode: "full" | "creative" = "full",
   fanficContext?: FanficContext,
-  languageOverride?: "zh" | "en",
+  languageOverride?: "zh" | "en" | "vi",
   inputProfile: "legacy" | "governed" = "legacy",
   lengthSpec?: LengthSpec,
 ): string {
-  const isEnglish = (languageOverride ?? genreProfile.language) === "en";
+  const resolved = languageOverride ?? genreProfile.language ?? "zh";
+  const isVietnamese = resolved === "vi";
+  const isNonCjk = resolved === "en";
+  const isChinese = resolved === "zh";
   const governed = inputProfile === "governed";
-  const resolvedLengthSpec = lengthSpec ?? buildLengthSpec(book.chapterWordCount, isEnglish ? "en" : "zh");
+  // Vietnamese uses word-count like English; Chinese uses character-count
+  const resolvedLengthSpec = lengthSpec ?? buildLengthSpec(book.chapterWordCount, isChinese ? "zh" : "en");
 
-  const outputSection = isEnglish
+  // Output format: vi reuses English output format (same structural markers),
+  // but the output language reminder forces prose content to be Vietnamese
+  const outputSection = (isNonCjk || isVietnamese)
     ? (mode === "creative"
         ? buildEnglishCreativeOutputFormat(book, genreProfile, resolvedLengthSpec)
         : buildEnglishOutputFormat(book, genreProfile, resolvedLengthSpec))
@@ -43,7 +50,27 @@ export function buildWriterSystemPrompt(
         ? buildCreativeOutputFormat(book, genreProfile, resolvedLengthSpec)
         : buildOutputFormat(book, genreProfile, resolvedLengthSpec));
 
-  const sections = isEnglish
+  const sections = isVietnamese
+    ? [
+        buildVietnameseGenreIntro(book, genreProfile),
+        buildGovernedInputContract("en", governed),
+        buildChapterMemoContract("en", governed),
+        buildLengthGuidance(resolvedLengthSpec, "en"),
+        buildGoldenOpeningDiscipline(chapterNumber, "en"),
+        buildGenreRules(genreProfile, genreBody),
+        buildProtagonistRules(bookRules),
+        buildNarrativePersonRule(bookRules, "en"),
+        buildBookRulesBody(bookRulesBody),
+        buildStyleGuide(styleGuide),
+        buildStyleFingerprint(styleFingerprint),
+        fanficContext ? buildFanficCanonSection(fanficContext.fanficCanon, fanficContext.fanficMode) : "",
+        fanficContext ? buildCharacterVoiceProfiles(fanficContext.fanficCanon) : "",
+        fanficContext ? buildFanficModeInstructions(fanficContext.fanficMode, fanficContext.allowedDeviations) : "",
+        // Hard output language constraint — must be last before outputSection
+        buildVietnameseOutputLanguageReminder(),
+        outputSection,
+      ]
+    : isNonCjk
     ? [
         buildEnglishGenreIntro(book, genreProfile),
         buildGovernedInputContract("en", governed),
@@ -52,14 +79,13 @@ export function buildWriterSystemPrompt(
         buildGoldenOpeningDiscipline(chapterNumber, "en"),
         buildGenreRules(genreProfile, genreBody),
         buildProtagonistRules(bookRules),
-        buildNarrativePersonRule(bookRules, isEnglish ? "en" : "zh"),
+        buildNarrativePersonRule(bookRules, "en"),
         buildBookRulesBody(bookRulesBody),
         buildStyleGuide(styleGuide),
         buildStyleFingerprint(styleFingerprint),
         fanficContext ? buildFanficCanonSection(fanficContext.fanficCanon, fanficContext.fanficMode) : "",
         fanficContext ? buildCharacterVoiceProfiles(fanficContext.fanficCanon) : "",
         fanficContext ? buildFanficModeInstructions(fanficContext.fanficMode, fanficContext.allowedDeviations) : "",
-        // Pre-write checklist moved to style_guide.md (v10)
         outputSection,
       ]
     : [
@@ -71,14 +97,13 @@ export function buildWriterSystemPrompt(
         bookRules?.enableFullCastTracking ? buildFullCastTracking() : "",
         buildGenreRules(genreProfile, genreBody),
         buildProtagonistRules(bookRules),
-        buildNarrativePersonRule(bookRules, isEnglish ? "en" : "zh"),
+        buildNarrativePersonRule(bookRules, "zh"),
         buildBookRulesBody(bookRulesBody),
         buildStyleGuide(styleGuide),
         buildStyleFingerprint(styleFingerprint),
         fanficContext ? buildFanficCanonSection(fanficContext.fanficCanon, fanficContext.fanficMode) : "",
         fanficContext ? buildCharacterVoiceProfiles(fanficContext.fanficCanon) : "",
         fanficContext ? buildFanficModeInstructions(fanficContext.fanficMode, fanficContext.allowedDeviations) : "",
-        // Pre-write checklist moved to style_guide.md (v10)
         outputSection,
       ];
 
@@ -93,10 +118,10 @@ function buildGenreIntro(book: BookConfig, gp: GenreProfile): string {
   return `你是一位专业的${gp.name}网络小说作家。你为${book.platform}平台写作。`;
 }
 
-function buildGovernedInputContract(language: "zh" | "en", governed: boolean): string {
+function buildGovernedInputContract(language: "zh" | "en" | "vi", governed: boolean): string {
   if (!governed) return "";
 
-  if (language === "en") {
+  if (language !== "zh") {
     return `## Input Governance Contract
 
 - Chapter-specific steering comes from the provided chapter intent and composed context package.
@@ -127,10 +152,10 @@ function buildGovernedInputContract(language: "zh" | "en", governed: boolean): s
 // Chapter memo alignment — 7 sections from mobile web-fiction craft methodology
 // ---------------------------------------------------------------------------
 
-function buildChapterMemoContract(language: "zh" | "en", governed: boolean): string {
+function buildChapterMemoContract(language: "zh" | "en" | "vi", governed: boolean): string {
   if (!governed) return "";
 
-  if (language === "en") {
+  if (language !== "zh") {
     return `## Chapter Memo Alignment
 
 You will receive a chapter_memo composed of 7 markdown sections:
@@ -163,8 +188,8 @@ Address each section in order when drafting the chapter. Every section must leav
 写作时按段落顺序落实，每一段都要在正文里有对应的兑现痕迹。如果某一段没有体现到正文里，本章不算完成。**写完初稿后自检一遍 hook 账**：把 advance 和 resolve 的 hook_id 列下来，对照正文，确认每一个都能指到一段带具体动作/物件/对话的 prose。如果指不到，回去补写；不要提交"账本在 memo 里、正文里没落"的稿子——审稿会标记缺口并要求补出具体场景。`;
 }
 
-function buildLengthGuidance(lengthSpec: LengthSpec, language: "zh" | "en"): string {
-  if (language === "en") {
+function buildLengthGuidance(lengthSpec: LengthSpec, language: "zh" | "en" | "vi"): string {
+  if (language !== "zh") {
     return `## Length Guidance
 
 - Target length: ${lengthSpec.target} words
@@ -187,11 +212,11 @@ function buildLengthGuidance(lengthSpec: LengthSpec, language: "zh" | "en"): str
 
 export function buildGoldenOpeningDiscipline(
   chapterNumber: number | undefined,
-  language: "zh" | "en",
+  language: "zh" | "en" | "vi",
 ): string {
   if (chapterNumber === undefined || chapterNumber > 3) return "";
 
-  if (language === "en") {
+  if (language !== "zh") {
     return `## Golden Opening Discipline — Chapter ${chapterNumber}
 
 This is chapter ${chapterNumber} of the opening three — your prose directly decides whether the reader stays. The Golden Three Chapters rule is a hard constraint on your sentences, not advice. Chapter 1: within the first 800 words the protagonist must trip the main-line conflict (chase, dead-end, dispossession, transmigration-as-crisis); long background paragraphs are forbidden, and worldbuilding rides on the protagonist's actions instead of being explained in a block. **The last sentence of the first 300 words (the reader's first phone screen) must land a dramatic / reversal / striking beat — "Officer, I transmigrated"-level, "I'll probably die tomorrow"-level, "I'm attending my own funeral"-level — not background or scene-setting. When the reader scrolls to the bottom of the first screen they must feel pulled into the next line.** Chapter 2: the edge — power, system, rebirth-memory, information advantage — must be **performed** (one concrete event of using it, with a visible consequence), not **announced** (a narrator paragraph saying it exists). Chapter 3: somewhere in this chapter the protagonist's next quantifiable short-term goal must surface, so the reader can name what comes next when they close the page.
@@ -253,10 +278,10 @@ function buildGenreRules(gp: GenreProfile, genreBody: string): string {
 // Narrative person is a durable user constraint: enforce it only when the user
 // explicitly set one (book_rules.narrativePerson). When unset, stay silent so the
 // genre default applies — we never impose a person the user didn't ask for.
-function buildNarrativePersonRule(bookRules: BookRules | null, language: "zh" | "en"): string {
+function buildNarrativePersonRule(bookRules: BookRules | null, language: "zh" | "en" | "vi"): string {
   const person = bookRules?.narrativePerson;
   if (!person) return "";
-  if (language === "en") {
+  if (language !== "zh") {
     return person === "first"
       ? "## Narrative person (hard constraint)\nWrite this book entirely in FIRST person (the protagonist's inner viewpoint). Do NOT slip into third person or an omniscient narrator — this overrides genre convention and your default."
       : "## Narrative person (hard constraint)\nWrite this book in THIRD person.";

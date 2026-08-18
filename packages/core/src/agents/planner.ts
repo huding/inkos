@@ -196,7 +196,7 @@ export class PlannerAgent extends BaseAgent {
     readonly chapterContext?: string;
     readonly relevantHooks?: ReadonlyArray<StoredHook>;
     readonly recyclableHooks?: ReadonlyArray<StoredHook>;
-    readonly language?: "zh" | "en";
+    readonly language?: "zh" | "en" | "vi";
     readonly lengthSpec: LengthSpec;
   }): Promise<ChapterMemo> {
     const [characterMatrix, subplotBoard, emotionalArcs, bookRulesRaw] = await Promise.all([
@@ -207,16 +207,16 @@ export class PlannerAgent extends BaseAgent {
     ]);
 
     const language = input.language ?? "zh";
-    const noPriorChapter = language === "en"
+    const noPriorChapter = language !== "zh"
       ? "(this is the opening chapter — no prior chapter)"
       : "（本章为起始章，无前章）";
-    const noBookRules = language === "en"
+    const noBookRules = language !== "zh"
       ? "(no book_rules entries)"
       : "（暂无 book_rules 条目）";
-    const retryFeedbackHeader = language === "en"
+    const retryFeedbackHeader = language !== "zh"
       ? "## Error from previous output"
       : "## 上次输出的错误";
-    const retryFeedbackTrailer = language === "en"
+    const retryFeedbackTrailer = language !== "zh"
       ? "Fix and re-emit."
       : "请修正后重新输出。";
 
@@ -298,10 +298,49 @@ export class PlannerAgent extends BaseAgent {
     readonly isGoldenOpening: boolean;
     readonly fallbackGoal: string;
     readonly errorMessage: string;
-    readonly language: "zh" | "en";
+    readonly language: "zh" | "en" | "vi";
     readonly lengthSpec: LengthSpec;
   }): string {
-    if (input.language === "en") {
+    if (input.language === "vi") {
+      return [
+        `# Kế hoạch chương ${input.chapterNumber}`,
+        "",
+        "## Mục tiêu",
+        input.fallbackGoal || `Tiếp tục chương ${input.chapterNumber} theo đề cương hiện tại`,
+        "",
+        "## Các tuyến truyện liên quan",
+        "không có",
+        "",
+        "## Ngân sách cảnh và độ dài",
+        `Lên kế hoạch 2-5 cảnh cụ thể với hành động và hệ quả rõ ràng, tổng độ dài nằm trong khoảng ${input.lengthSpec.hardMin}-${input.lengthSpec.hardMax} từ, hướng đến ${input.lengthSpec.target} từ. Phân bổ ngân sách từ cho từng cảnh.`,
+        "",
+        "## Điểm bắt đầu",
+        `Dựa trên mục tiêu chương và bối cảnh sách để tiếp tục chương ${input.chapterNumber} mà không tự ý thay đổi hướng đi.`,
+        "",
+        "## Điểm cuối chương",
+        "Giữ kỳ vọng đang hoạt động của độc giả từ đề cương và chương trước; không thay thế bằng cảnh chung chung.",
+        "",
+        "## Cốt truyện chính",
+        "Chỉ giải quyết những lời hứa gần mà ngữ cảnh đã hỗ trợ; giữ bí mật lớn hơn chưa tiết lộ trừ khi đề cương yêu cầu.",
+        "",
+        "## Nhịp chậm / chuyển tiếp",
+        "Nếu cần nhịp chậm, phải mang theo áp lực, bằng chứng, sự chuyển động trong mối quan hệ, hoặc thiết lập cụ thể cho hành động tiếp theo.",
+        "",
+        "## Ba câu hỏi kiểm tra lựa chọn then chốt",
+        "Lựa chọn chính của nhân vật phải có lý do, phù hợp với lợi ích hiện tại, và nhất quán với tính cách đã được thiết lập.",
+        "",
+        "## Hook chờ",
+        "advance: giữ lời hứa đang hoạt động tiếp tục; resolve: chỉ giải quyết những gì đã có bằng chứng; defer: bảo toàn các tuyến lớn cho các chương sau.",
+        "",
+        "## Chú ý",
+        "Không mâu thuẫn với sự thật đã thiết lập, không bỏ qua hướng dẫn hiện tại của người dùng, không biến fallback memo thành đề cương mới.",
+        "",
+        "## Cảnh báo planner",
+        `Mô hình không tạo được memo chương hợp lệ sau ${MEMO_RETRY_LIMIT} lần thử. Lỗi phân tích cuối cùng: ${input.errorMessage}`,
+      ].join("\n");
+    }
+
+    if (input.language !== "zh") {
       return [
         `# Chapter ${input.chapterNumber} memo`,
         "",
@@ -398,6 +437,8 @@ export class PlannerAgent extends BaseAgent {
     if (volumeOutline === "(文件尚未创建)") return undefined;
     return this.isChineseLanguage(language)
       ? `卷纲节点：${outlineNode}`
+      : language === "vi"
+      ? `Tập trung vào nút: ${outlineNode}`
       : `Outline node: ${outlineNode}`;
   }
 
@@ -530,15 +571,19 @@ export class PlannerAgent extends BaseAgent {
     return this.extractListItems(focusSection, limit);
   }
 
-  private renderHookBudget(activeCount: number, language: "zh" | "en"): string {
+  private renderHookBudget(activeCount: number, language: "zh" | "en" | "vi"): string {
     const cap = 12;
     if (activeCount < 10) {
-      return language === "en"
+      return language === "vi"
+        ? `### Ngân sách hook\n- ${activeCount} hook đang hoạt động (tối đa: ${cap})`
+        : language !== "zh"
         ? `### Hook Budget\n- ${activeCount} active hooks (capacity: ${cap})`
         : `### 伏笔预算\n- 当前 ${activeCount} 条活跃伏笔（容量：${cap}）`;
     }
     const remaining = Math.max(0, cap - activeCount);
-    return language === "en"
+    return language === "vi"
+      ? `### Ngân sách hook\n- ${activeCount} hook đang hoạt động — gần đạt tối đa (${cap}). Chỉ còn ${remaining} hook mới được phép. Ưu tiên giải quyết nợ cũ trước khi mở tuyến mới.`
+      : language !== "zh"
       ? `### Hook Budget\n- ${activeCount} active hooks — approaching capacity (${cap}). Only ${remaining} new hook(s) allowed. Prioritize resolving existing debt over opening new threads.`
       : `### 伏笔预算\n- 当前 ${activeCount} 条活跃伏笔——接近容量上限（${cap}）。仅剩 ${remaining} 个新坑位。优先回收旧债，不要轻易开新线。`;
   }
@@ -821,7 +866,7 @@ export class PlannerAgent extends BaseAgent {
   private renderIntentMarkdown(
     intent: ChapterIntent,
     memo: ChapterMemo,
-    language: "zh" | "en",
+    language: "zh" | "en" | "vi",
     pendingHooks: string,
     chapterSummaries: string,
     activeHookCount: number,

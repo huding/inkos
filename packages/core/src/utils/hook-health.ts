@@ -5,7 +5,7 @@ import { describeHookLifecycle, localizeHookPayoffTiming, normalizeStoredHookSta
 import { HOOK_HEALTH_DEFAULTS } from "./hook-policy.js";
 
 export function analyzeHookHealth(params: {
-  readonly language: "zh" | "en";
+  readonly language: "zh" | "en" | "vi";
   readonly chapterNumber: number;
   readonly targetChapters?: number;
   readonly hooks: ReadonlyArray<HookRecord>;
@@ -132,7 +132,7 @@ export function analyzeHookHealth(params: {
 }
 
 function buildPressureDescription(params: {
-  readonly language: "zh" | "en";
+  readonly language: "zh" | "en" | "vi";
   readonly entries: ReadonlyArray<{
     readonly hook: HookRecord;
     readonly lifecycle: ReturnType<typeof describeHookLifecycle>;
@@ -167,25 +167,25 @@ function buildPressureDescription(params: {
 
 function localizePressureLabel(
   lifecycle: ReturnType<typeof describeHookLifecycle>,
-  language: "zh" | "en",
+  language: "zh" | "en" | "vi",
 ): string {
   if (lifecycle.overdue) {
-    return language === "en" ? "overdue" : "已逾期";
+    return language === "zh" ? "已逾期" : language === "vi" ? "quá hạn" : "overdue";
   }
   if (lifecycle.readyToResolve) {
-    return language === "en" ? "ready to pay off" : "可回收";
+    return language === "zh" ? "可回收" : language === "vi" ? "sẵn sàng thu hồi" : "ready to pay off";
   }
-  return language === "en" ? "stale" : "陈旧";
+  return language === "zh" ? "陈旧" : language === "vi" ? "đã cũ" : "stale";
 }
 
 function warning(
-  language: "zh" | "en",
+  language: "zh" | "en" | "vi",
   description: string,
   suggestion: string,
 ): AuditIssue {
   return {
     severity: "warning",
-    category: language === "en" ? "Hook Debt" : "伏笔债务",
+    category: language === "zh" ? "伏笔债务" : language === "vi" ? "Nợ hook" : "Hook Debt",
     description,
     suggestion,
   };

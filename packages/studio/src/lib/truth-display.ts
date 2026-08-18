@@ -36,22 +36,22 @@ export function frontmatterToCards(fm: TruthFrontmatter | null | undefined): Rea
   if (!fm) return [];
   const cards: DisplayCard[] = [];
   const name = fm.protagonist?.name?.trim();
-  if (name) cards.push({ label: tr("主角", "Protagonist"), values: [name] });
+  if (name) cards.push({ label: tr("主角", "Protagonist", "Nhân vật chính"), values: [name] });
   const genre = fm.genreLock?.primary?.trim();
-  if (genre) cards.push({ label: tr("题材", "Genre"), values: [genre] });
+  if (genre) cards.push({ label: tr("题材", "Genre", "Thể loại"), values: [genre] });
   const era = fm.eraConstraints;
   if (era?.enabled) {
     const eraValues = [era.period, era.region]
       .map((v) => v?.trim())
       .filter((v): v is string => Boolean(v));
-    if (eraValues.length > 0) cards.push({ label: tr("时代背景", "Era"), values: eraValues });
+    if (eraValues.length > 0) cards.push({ label: tr("时代背景", "Era", "Bối cảnh thời đại"), values: eraValues });
   }
   const prohibitions = (fm.prohibitions ?? []).map((p) => p.trim()).filter(Boolean);
-  if (prohibitions.length > 0) cards.push({ label: tr("红线", "Hard Lines"), values: prohibitions });
+  if (prohibitions.length > 0) cards.push({ label: tr("红线", "Hard Lines", "Giới hạn đỏ"), values: prohibitions });
   if (fm.fanficMode) {
     const fanficLabel = FANFIC_LABELS[fm.fanficMode];
     cards.push({
-      label: tr("同人模式", "Fanfic Mode"),
+      label: tr("同人模式", "Fanfic Mode", "Chế độ đồng nhân"),
       values: [fanficLabel ? tr(fanficLabel.zh, fanficLabel.en) : fm.fanficMode],
     });
   }
