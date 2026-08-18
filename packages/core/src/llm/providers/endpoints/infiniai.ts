@@ -18,6 +18,7 @@ export const INFINIAI: InkosEndpoint = {
   defaultTemperature: 0.7,
   writingTemperature: 1,
   models: [
+    { id: "max", maxOutput: 100000, contextWindowTokens: 1000000, enabled: true },
     { id: "minimax-m2.7", maxOutput: 4096, contextWindowTokens: 204800, enabled: true, releasedAt: "2026-03-17" },
     { id: "deepseek-v3.2", maxOutput: 8192, contextWindowTokens: 131072, releasedAt: "2025-12-02" },
     { id: "deepseek-v3.2-thinking", maxOutput: 65536, contextWindowTokens: 131072, enabled: true, releasedAt: "2025-12-02" },
